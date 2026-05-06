@@ -2,28 +2,32 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>背单词</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>背单词APP</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="card">
-  <h1 id="word">Loading...</h1>
-  <p id="ipa"></p>
-  <p id="pos"></p>
+<div class="app">
+  <div class="card" id="card" onclick="toggleMeaning()">
+    
+    <div class="word" id="word">Loading...</div>
+    <div class="ipa" id="ipa"></div>
+    <div class="pos" id="pos"></div>
 
-  <p id="meaning" class="hidden"></p>
+    <div class="meaning hidden" id="meaning"></div>
 
-  <button onclick="toggleMeaning()">显示/隐藏释义</button>
-  <button onclick="playAudio()">🔊 发音</button>
-
-  <div class="actions">
-    <button class="know" onclick="handle(1)">认识</button>
-    <button class="dont" onclick="handle(0)">不认识</button>
   </div>
 
-  <!-- 新增删除按钮 -->
-  <button class="delete" onclick="deleteWord()">🗑 删除这个单词</button>
+  <div class="controls">
+    <button class="btn audio" onclick="playAudio(event)">🔊</button>
+    <button class="btn know" onclick="handle(1)">认识</button>
+    <button class="btn dont" onclick="handle(0)">不认识</button>
+  </div>
+
+  <div class="bottom">
+    <button class="delete" onclick="deleteWord()">删除</button>
+  </div>
 </div>
 
 <script src="app.js"></script>
