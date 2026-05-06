@@ -29,6 +29,12 @@ async function getRandomWord() {
   );
 
   const data = await res.json();
+
+  if (!data.results || data.results.length === 0) {
+    alert("没有单词了");
+    return null;
+  }
+
   return data.results[0];
 }
 
@@ -54,6 +60,8 @@ async function checkWord(wordId) {
 
 // 💾 保存记录
 async function saveWord(status) {
+  if (!currentWord) return;
+
   const wordId = currentWord.objectId;
 
   const existing = await checkWord(wordId);
@@ -96,7 +104,6 @@ async function deleteWord() {
   if (!currentWord) return;
 
   const confirmDelete = confirm(`确定删除单词：${currentWord.word} 吗？`);
-
   if (!confirmDelete) return;
 
   try {
@@ -112,14 +119,16 @@ async function deleteWord() {
     loadWord();
 
   } catch (err) {
-    alert("删除失败");
     console.error(err);
+    alert("删除失败");
   }
 }
 
 // 🎯 加载单词
 async function loadWord() {
   const word = await getRandomWord();
+  if (!word) return;
+
   currentWord = word;
 
   document.getElementById("word").innerText = word.word;
@@ -130,21 +139,33 @@ async function loadWord() {
   document.getElementById("meaning").classList.add("hidden");
 }
 
-// 👆 显示释义
+// 👆 点击卡片显示释义
 function toggleMeaning() {
   document.getElementById("meaning").classList.toggle("hidden");
 }
 
-// 🔊 发音
-function playAudio() {
-  if (currentWord.pronunciation) {
+// 🔊 发音（重点：使用 pronunciation 字段）
+function playAudio(event) {
+  event.stopPropagation(); // 防止触发翻卡
+
+  if (!currentWord || !currentWord.pronunciation) {
+    alert("没有发音");
+    return;
+  }
+
+  try {
     const audio = new Audio(currentWord.pronunciation);
     audio.play();
+  } catch (err) {
+    console.error(err);
+    alert("发音播放失败");
   }
 }
 
 // ✅ / ❌ 点击
-async function handle(status) {
+async function handle(status, event) {
+  if (event) event.stopPropagation();
+
   await saveWord(status);
   loadWord();
 }
