@@ -1,0 +1,53 @@
+body {
+  font-family: Arial;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  width: 300px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1 {
+  font-size: 28px;
+}
+
+.hidden {
+  display: none;
+}
+
+.actions {
+  margin-top: 20px;
+}
+
+button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.know {
+  background: #4CAF50;
+  color: white;
+}
+
+.dont {
+  background: #f44336;
+  color: white;
+}
+
+.delete {
+  background: #999;
+  color: white;
+  margin-top: 15px;
+}
