@@ -3,33 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>背单词APP</title>
+  <title>沉浸式背单词</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
+<div class="bg-blur"></div>
 <div class="app">
-  <div class="card" id="card" onclick="toggleMeaning()">
-    
-    <div class="word" id="word">Loading...</div>
-    <div class="ipa" id="ipa"></div>
-    <div class="pos" id="pos"></div>
+  <header class="topbar">
+    <h1>Word Flow</h1>
+    <div class="mode-switch" id="modeSwitch">
+      <button class="seg-btn active" data-mode="en" onclick="switchMode('en')">英 → 中</button>
+      <button class="seg-btn" data-mode="cn" onclick="switchMode('cn')">中 → 英</button>
+      <div class="seg-indicator" id="segIndicator"></div>
+    </div>
+  </header>
 
-    <div class="meaning hidden" id="meaning"></div>
+  <div class="switch-hint" id="switchHint">每组固定流程：先 英→中 10词，再 中→英 10词</div>
 
+  <div class="progress-wrap">
+    <div class="progress-text" id="progressText">准备中...</div>
+    <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
   </div>
 
-  <div class="controls">
-    <button class="btn audio" onclick="playAudio(event)">🔊</button>
-    <button class="btn know" onclick="handle(1)">认识</button>
-    <button class="btn dont" onclick="handle(0)">不认识</button>
+  <div class="card" id="card" onclick="toggleExpand(event)">
+    <div class="primary" id="primary" onclick="playAudio(event)">Loading...</div>
+    <div class="meta" id="meta"></div>
+    <button class="inline-audio" onclick="playAudio(event)">🔊 发音</button>
+
+    <div class="expand" id="expand">
+      <div class="meaning" id="meaning"></div>
+      <div class="example" id="example"></div>
+      <div class="root" id="root"></div>
+    </div>
+  </div>
+
+  <div class="controls controls-4">
+    <button class="btn ghost" onclick="playAudio(event)">听发音</button>
+    <button class="btn ghost slow" onclick="playAudio(event, true)">慢速</button>
+    <button class="btn know" onclick="handleKnow(true, event)">认识</button>
+    <button class="btn dont" onclick="handleKnow(false, event)">不认识</button>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="stat-card"><span>今日新词</span><b id="sNew">0</b></div>
+    <div class="stat-card"><span>今日已学</span><b id="sDone">0</b></div>
+    <div class="stat-card"><span>今日待学</span><b id="sLeft">0</b></div>
+    <div class="stat-card"><span>连续学习</span><b id="sStreak">1 天</b></div>
   </div>
 
   <div class="bottom">
-    <button class="delete" onclick="deleteWord()">删除</button>
+    <button class="delete" onclick="deleteWord(event)">删除当前词</button>
   </div>
 </div>
-
 <script src="app.js"></script>
 </body>
 </html>
