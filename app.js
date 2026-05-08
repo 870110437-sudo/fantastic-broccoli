@@ -91,8 +91,10 @@ async function saveWord(status) {
   }
 }
 
-function switchMode(mode) {
+function switchMode(mode, force = false) {
   if (currentMode === mode || inWrongReview) return;
+  if (!force) return;
+
   currentMode = mode;
   document.querySelectorAll(".seg-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === mode));
   document.getElementById("segIndicator").style.transform = mode === "en" ? "translateX(0)" : "translateX(100%)";
@@ -182,7 +184,7 @@ async function nextWord() {
       currentMode = studyModes.CN_TO_EN;
       currentIndex = 0;
       state.phaseDone = 0;
-      switchMode("cn");
+      switchMode("cn", true);
       return;
     }
 
@@ -227,16 +229,6 @@ async function deleteWord(event) {
   await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, { method: "DELETE", headers });
   state.groupWords = state.groupWords.filter(w => w.objectId !== currentWord.objectId);
   state.wrongWords = state.wrongWords.filter(w => w.objectId !== currentWord.objectId);
-
-  const queue = inWrongReview ? state.wrongWords : state.groupWords;
-  if (!queue.length) {
-    await startSession();
-    return;
-  }
-
-  if (currentIndex >= queue.length) currentIndex = queue.length - 1;
-  currentWord = queue[currentIndex];
-  renderWord();
 }
 
 async function startSession() {
@@ -251,12 +243,10 @@ async function startSession() {
   document.getElementById("segIndicator").style.transform = "translateX(0)";
   document.querySelectorAll(".seg-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === "en"));
 
-  currentWord = state.groupWords[0] || null;
-  if (!currentWord) {
-    document.getElementById("progressText").textContent = "词库不足，请先补充单词";
-    return;
-  }
-  renderWord();
-}
+
+  const switchHint = document.getElementById("switchHint");
+  if (switchHint) switchHint.textContent = "每组固定流程：先 英→中 10词，再 中→英 10词";
+
+
 
 startSession();
