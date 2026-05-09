@@ -115,24 +115,38 @@ function renderWord() {
   expanded = false;
   document.getElementById("card").classList.remove("expanded");
   
-  if (currentMode === studyModes.EN_TO_CN) {
-    primary.textContent = currentWord.word || "-";
-    meta.textContent = `${currentWord.IPA || ""}  ${currentWord.pos || ""}`.trim();
-    meaning.textContent = currentWord.meaning || "暂无释义";
-    example.textContent = currentWord.example ? `例句：${currentWord.example}` : "例句：暂无";
-    const memory = currentWord.memorymethod || currentWord.root || "";
-    root.textContent = memory ? `词根词缀：${memory}` : "词根词缀：预留";
-    memoryMethodInput.value = currentWord.memorymethod || "";
-  } else {
-    primary.textContent = currentWord.meaning || "暂无释义";
-    meta.textContent = "先回忆英文，再点击查看";
-    meaning.textContent = `${currentWord.word || "-"}  ${currentWord.IPA || ""}`.trim();
-    example.textContent = currentWord.pos ? `词性：${currentWord.pos}` : "词性：暂无";
-    const memory = currentWord.memorymethod || currentWord.root || "";
-    root.textContent = memory ? `词根词缀：${memory}` : "词根词缀：预留";
-    memoryMethodInput.value = currentWord.memorymethod || "";
+ // 模式配置映射，把两种模式的渲染规则写死在这里
+const modeRenderConfig = {
+  [studyModes.EN_TO_CN]: {
+    primary: () => currentWord.word || "-",
+    meta: () => `${currentWord.IPA ?? ""} ${currentWord.pos ?? ""}`.trim(),
+    meaning: () => currentWord.meaning || "暂无释义",
+    example: () => currentWord.example?.trim() ? `例句: ${currentWord.example}` : "例句: 暂无"
+  },
+  // 反向模式
+  [studyModes.CN_TO_EN]: {
+    primary: () => currentWord.meaning || "暂无释义",
+    meta: () => "先回忆英文，再点击查看",
+    meaning: () => `${currentWord.word || "-"} ${currentWord.IPA ?? ""}`.trim(),
+    example: () => currentWord.pos ? `词性: ${currentWord.pos}` : "词性: 暂无"
   }
-  updateProgress();
+};
+
+// 公共逻辑（和模式无关，抽离出来，只写一次）
+const memory = currentWord.memorymethod || currentWord.root || "";
+root.textContent = memory ? `词根词缀: ${memory}` : "词根词缀: 预留";
+memoryMethodInput.value = currentWord.memorymethod || "";
+
+// 根据当前模式直接拿配置渲染
+const renderRule = modeRenderConfig[currentMode];
+if (renderRule) {
+  primary.textContent = renderRule.primary();
+  meta.textContent = renderRule.meta();
+  meaning.textContent = renderRule.meaning();
+  example.textContent = renderRule.example();
+}
+
+updateProgress();
 }
 
 function playAudio(event, slow = false) { 
