@@ -1,6 +1,5 @@
-// 凭证应通过环境变量或后端API获取，不要在客户端硬编码
-const APP_ID = localStorage.getItem("appId") || ""; // 从localStorage获取
-const APP_KEY = localStorage.getItem("appKey") || ""; // 从localStorage获取
+const APP_ID = "1f1dcb2717bc41a2d196167508f83458";
+const APP_KEY = "2efd06f7769a606544357909a7503793";
 const BASE_URL = "https://api.codenow.cn/1/classes";
 const GEN_BASE_URL = "https://shiyunapi.com/v1";
 const CHEAP_MODEL = "deepseek-chat";
