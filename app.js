@@ -25,6 +25,7 @@ const state = { groupWords: [], wrongWords: [], todayDone: 0, todayNew: 0, phase
 
 let userId = localStorage.getItem("userId");
 if (!userId) {
+  userId = (prompt("请输入用户名") || "").trim().slice(0, 32) || `guest_${Date.now()}`;
   userId = prompt("请输入用户名")?.trim() || `guest_${Date.now()}`;
   localStorage.setItem("userId", userId);
 }
@@ -124,6 +125,8 @@ async function saveMemoryMethod(event) {
   if (event) event.stopPropagation();
   if (!currentWord?.objectId) return;
   const input = document.getElementById("memoryMethodInput");
+  const memorymethod = input.value.trim().slice(0, 300);
+  input.value = memorymethod;
   const memorymethod = input.value.trim();
   try {
     await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, {
@@ -185,6 +188,31 @@ async function generatePassage(words) {
   if (!res.ok) throw new Error("短文生成失败");
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content?.trim() || "{}";
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new Error("模型返回格式错误");
+  }
+  if (!parsed.passage || typeof parsed.passage !== "string") throw new Error("模型返回格式错误");
+  return parsed.passage;
+}
+
+function renderPassageWithHighlights(passage, words) {
+  const dict = new Map(words.map(w => [String(w.word || "").toLowerCase(), w.meaning || "暂无释义"]));
+  const frag = document.createDocumentFragment();
+  const parts = String(passage || "").split(/(\b)/);
+  for (const p of parts) {
+    const key = p.toLowerCase().replace(/[^a-z'-]/gi, "");
+    if (dict.has(key)) {
+      const span = document.createElement("span");
+      span.className = "hl-word";
+      span.textContent = p;
+      span.dataset.meaning = dict.get(key);
+      span.onclick = () => showToast(`${span.textContent}：${span.dataset.meaning}`);
+      frag.appendChild(span);
+    } else {
+      frag.appendChild(document.createTextNode(p));
   const parsed = JSON.parse(raw);
   if (!parsed.passage) throw new Error("模型返回格式错误");
   return parsed.passage;
@@ -427,6 +455,13 @@ async function openHistoryModal(event) {
     rows.forEach(r => {
       const item = document.createElement("div");
       item.className = "history-item";
+      const time = document.createElement("div");
+      time.className = "time";
+      time.textContent = r.createdAt || "";
+      const text = document.createElement("div");
+      text.textContent = r.minitext || "";
+      item.appendChild(time);
+      item.appendChild(text);
       item.innerHTML = `<div class="time">${escapeHtml(r.createdAt || "")}</div><div>${escapeHtml(r.minitext || "")}</div>`;
       list.appendChild(item);
     });
@@ -443,6 +478,13 @@ function openSettingsModal() {
 function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
 function saveApiKey() {
   const key = document.getElementById("apiKeyInput").value.trim();
+  if (!key.startsWith("sk-")) {
+    showToast("Key 格式不正确");
+    return;
+  }
+  localStorage.setItem("genApiKey", key);
+  closeSettingsModal();
+  showToast("API Key 已保存");
   localStorage.setItem("genApiKey", key);
   closeSettingsModal();
   showToast("API Key 已保存");
