@@ -2,6 +2,7 @@ const APP_ID = "1f1dcb2717bc41a2d196167508f83458";
 const APP_KEY = "2efd06f7769a606544357909a7503793";
 const BASE_URL = "https://api.codenow.cn/1/classes";
 const GEN_BASE_URL = "https://shiyunapi.com/v1";
+const GEN_API_KEY = "sk-Cc6RjpYaHQmyJctCxaJEVjOcroZCvQZTwe7PQRiXDBpGZcsd";
 const CHEAP_MODEL = "deepseek-chat";
 
 const headers = {
@@ -140,6 +141,11 @@ async function nextWord() {
   currentWord = queue[currentIndex];
   renderWord();
 }
+    if (inWrongReview) {
+      alert("本组学习完成，包含错词复习 ✅");
+      await openPassageTest(state.groupWords);
+      return;
+    }
 
 async function generatePassage(words) {
   const genKey = localStorage.getItem("genApiKey");
@@ -195,6 +201,8 @@ async function openPassageTest(words) {
     renderPassageWithHighlights(passage, words);
   } catch (e) {
     document.getElementById("passageContent").textContent = "短文生成失败，请检查API设置后再试。";
+    await openPassageTest(state.groupWords);
+    return;
   }
 }
 
@@ -240,6 +248,107 @@ function saveApiKey() {
   localStorage.setItem("genApiKey", key);
   closeSettingsModal();
   showToast("API Key 已保存");
+}
+
+async function generatePassage(words) {
+  const wordPairs = words.map(w => `${w.word}: ${w.meaning}`).join("\n");
+  const prompt = `请用以下10个英语单词写一个120词以内自然短文，要求：\n1) 必须包含所有单词且每个只出现一次\n2) 仅返回 JSON 格式 {\"passage\":\"...\"}\n3) 不要包含 markdown\n\n单词列表:\n${wordPairs}`;
+
+  const res = await fetch(`${GEN_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${GEN_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: CHEAP_MODEL,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: "You are a concise English writing assistant." },
+        { role: "user", content: prompt }
+      ]
+    })
+  });
+
+  if (!res.ok) throw new Error("短文生成失败");
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content?.trim() || "";
+  const parsed = JSON.parse(raw);
+  return parsed.passage;
+}
+
+function highlightPassage(passage, words) {
+  const dict = new Map(words.map(w => [w.word.toLowerCase(), w.meaning || "暂无释义"]));
+  const tokenized = passage.split(/(\b)/);
+  return tokenized.map(part => {
+    const key = part.toLowerCase().replace(/[^a-z'-]/gi, "");
+    if (dict.has(key)) {
+      const meaning = dict.get(key);
+      return `<span class="hl-word" data-meaning="${meaning}">${part}</span>`;
+    }
+    return part;
+  }).join("");
+}
+
+async function savePassage(minitext) {
+  await fetch(`${BASE_URL}/shortpassage`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ minitext, userId, score: Date.now() })
+  });
+}
+
+async function openPassageTest(words) {
+  try {
+    const passage = await generatePassage(words);
+    await savePassage(passage);
+    const html = highlightPassage(passage, words);
+    const box = document.getElementById("passageContent");
+    box.innerHTML = html;
+    box.querySelectorAll(".hl-word").forEach(el => {
+      el.addEventListener("click", () => alert(`${el.textContent}：${el.dataset.meaning}`));
+    });
+  } catch (e) {
+    document.getElementById("passageContent").textContent = "短文生成失败，请稍后再试。";
+  }
+
+  pendingNextSession = true;
+  document.getElementById("passageModal").classList.remove("hidden");
+}
+
+function closePassageModal(startNext = false) {
+  document.getElementById("passageModal").classList.add("hidden");
+  if (pendingNextSession && startNext) {
+    pendingNextSession = false;
+    startSession();
+  }
+}
+
+async function openHistoryModal(event) {
+  if (event) event.stopPropagation();
+  const list = document.getElementById("historyList");
+  list.innerHTML = "加载中...";
+  document.getElementById("historyModal").classList.remove("hidden");
+
+  try {
+    const where = encodeURIComponent(JSON.stringify({ userId }));
+    const res = await fetch(`${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`, { headers });
+    const data = await res.json();
+    const rows = data.results || [];
+
+    if (!rows.length) {
+      list.textContent = "暂无历史短文";
+      return;
+    }
+
+    list.innerHTML = rows.map(r => `<div class="history-item"><div class="time">${r.createdAt || ""}</div><div>${r.minitext || ""}</div></div>`).join("");
+  } catch (e) {
+    list.textContent = "加载失败";
+  }
+}
+
+function closeHistoryModal() {
+  document.getElementById("historyModal").classList.add("hidden");
 }
 
 function updateProgress() {
