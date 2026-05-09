@@ -79,3 +79,7 @@ body {
 .api-input { width: 100%; border: 1px solid #d1d5db; border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: #111827; color: #fff; padding: 10px 14px; border-radius: 999px; opacity: 0; transition: all .2s ease; pointer-events: none; font-size: 13px; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.memo-edit { margin-top: 10px; display: grid; gap: 8px; }
+.memo-input { width: 100%; min-height: 68px; border: 1px solid #d1d5db; border-radius: 10px; padding: 8px 10px; font-size: 13px; resize: vertical; }
+.memo-save { justify-self: end; padding: 8px 12px; border-radius: 10px; }

@@ -94,6 +94,7 @@ function renderWord() {
   const meaning = document.getElementById("meaning");
   const example = document.getElementById("example");
   const root = document.getElementById("root");
+  const memoryMethodInput = document.getElementById("memoryMethodInput");
   expanded = false;
   document.getElementById("card").classList.remove("expanded");
   if (currentMode === studyModes.EN_TO_CN) {
@@ -101,18 +102,42 @@ function renderWord() {
     meta.textContent = `${currentWord.IPA || ""}  ${currentWord.pos || ""}`.trim();
     meaning.textContent = currentWord.meaning || "暂无释义";
     example.textContent = currentWord.example ? `例句：${currentWord.example}` : "例句：暂无";
-    root.textContent = currentWord.root ? `词根词缀：${currentWord.root}` : "词根词缀：预留";
+    const memory = currentWord.memorymethod || currentWord.root || "";
+    root.textContent = memory ? `词根词缀：${memory}` : "词根词缀：预留";
+    memoryMethodInput.value = currentWord.memorymethod || "";
   } else {
     primary.textContent = currentWord.meaning || "暂无释义";
     meta.textContent = "先回忆英文，再点击查看";
     meaning.textContent = `${currentWord.word || "-"}  ${currentWord.IPA || ""}`.trim();
     example.textContent = currentWord.pos ? `词性：${currentWord.pos}` : "词性：暂无";
-    root.textContent = currentWord.root ? `词根词缀：${currentWord.root}` : "词根词缀：预留";
+    const memory = currentWord.memorymethod || currentWord.root || "";
+    root.textContent = memory ? `词根词缀：${memory}` : "词根词缀：预留";
+    memoryMethodInput.value = currentWord.memorymethod || "";
   }
   updateProgress();
 }
 
 function playAudio(event, slow = false) { if (event) event.stopPropagation(); if (!currentWord?.pronunciation) return alert("没有发音"); const a = new Audio(currentWord.pronunciation); a.playbackRate = slow ? 0.78 : 1; a.play().catch(() => alert("发音播放失败")); }
+
+
+async function saveMemoryMethod(event) {
+  if (event) event.stopPropagation();
+  if (!currentWord?.objectId) return;
+  const input = document.getElementById("memoryMethodInput");
+  const memorymethod = input.value.trim();
+  try {
+    await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ memorymethod })
+    });
+    currentWord.memorymethod = memorymethod;
+    document.getElementById("root").textContent = memorymethod ? `词根词缀：${memorymethod}` : "词根词缀：预留";
+    showToast("记忆法已保存");
+  } catch (e) {
+    showToast("保存失败，请稍后重试");
+  }
+}
 
 async function handleKnow(known, event) {
   if (event) event.stopPropagation();
@@ -164,6 +189,22 @@ async function generatePassage(words) {
   if (!parsed.passage) throw new Error("模型返回格式错误");
   return parsed.passage;
 }
+
+function renderPassageWithHighlights(passage, words) {
+  const dict = new Map(words.map(w => [String(w.word || "").toLowerCase(), w.meaning || "暂无释义"]));
+  const frag = document.createDocumentFragment();
+  const parts = String(passage || "").split(/(\b)/);
+  for (const p of parts) {
+    const key = p.toLowerCase().replace(/[^a-z'-]/gi, "");
+    if (dict.has(key)) {
+      const span = document.createElement("span");
+      span.className = "hl-word";
+      span.textContent = p;
+      span.dataset.meaning = dict.get(key);
+      span.onclick = () => showToast(`${span.textContent}：${span.dataset.meaning}`);
+      frag.appendChild(span);
+    } else {
+      frag.appendChild(document.createTextNode(p));
 
 function renderPassageWithHighlights(passage, words) {
   const dict = new Map(words.map(w => [String(w.word || "").toLowerCase(), w.meaning || "暂无释义"]));
@@ -340,7 +381,71 @@ async function openHistoryModal(event) {
       list.textContent = "暂无历史短文";
       return;
     }
+  }
+  const box = document.getElementById("passageContent");
+  box.textContent = "";
+  box.appendChild(frag);
+}
 
+async function savePassage(minitext) {
+  await fetch(`${BASE_URL}/shortpassage`, { method: "POST", headers, body: JSON.stringify({ minitext, userId, score: Date.now() }) });
+}
+
+async function openPassageTest(words) {
+  document.getElementById("passageModal").classList.remove("hidden");
+  document.getElementById("passageContent").textContent = "短文生成中...";
+  pendingNextSession = true;
+  try {
+    const passage = await generatePassage(words);
+    await savePassage(passage);
+    renderPassageWithHighlights(passage, words);
+  } catch (e) {
+    document.getElementById("passageContent").textContent = "短文生成失败，请检查API设置后再试。";
+  }
+}
+
+function closePassageModal(startNext = false) {
+  document.getElementById("passageModal").classList.add("hidden");
+  if (pendingNextSession && startNext) {
+    pendingNextSession = false;
+    startSession();
+  }
+}
+
+async function openHistoryModal(event) {
+  if (event) event.stopPropagation();
+  const list = document.getElementById("historyList");
+  list.textContent = "加载中...";
+  document.getElementById("historyModal").classList.remove("hidden");
+  try {
+    const where = encodeURIComponent(JSON.stringify({ userId }));
+    const res = await fetch(`${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`, { headers });
+    const data = await res.json();
+    const rows = data.results || [];
+    list.textContent = "";
+    if (!rows.length) { list.textContent = "暂无历史短文"; return; }
+    rows.forEach(r => {
+      const item = document.createElement("div");
+      item.className = "history-item";
+      item.innerHTML = `<div class="time">${escapeHtml(r.createdAt || "")}</div><div>${escapeHtml(r.minitext || "")}</div>`;
+      list.appendChild(item);
+    });
+  } catch (e) {
+    list.textContent = "加载失败";
+  }
+}
+function closeHistoryModal() { document.getElementById("historyModal").classList.add("hidden"); }
+
+function openSettingsModal() {
+  document.getElementById("apiKeyInput").value = localStorage.getItem("genApiKey") || "";
+  document.getElementById("settingsModal").classList.remove("hidden");
+}
+function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
+function saveApiKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  localStorage.setItem("genApiKey", key);
+  closeSettingsModal();
+  showToast("API Key 已保存");
     list.innerHTML = rows.map(r => `<div class="history-item"><div class="time">${r.createdAt || ""}</div><div>${r.minitext || ""}</div></div>`).join("");
   } catch (e) {
     list.textContent = "加载失败";
