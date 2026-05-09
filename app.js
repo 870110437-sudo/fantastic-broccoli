@@ -200,7 +200,7 @@ async function openPassageTest(words) {
 
 function closePassageModal(startNext = false) {
   document.getElementById("passageModal").classList.add("hidden");
-  if (pendingNextSession && (startNext || true)) {
+  if (pendingNextSession && startNext) {
     pendingNextSession = false;
     startSession();
   }
