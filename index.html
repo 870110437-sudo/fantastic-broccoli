@@ -32,6 +32,10 @@
       <div class="meaning" id="meaning"></div>
       <div class="example" id="example"></div>
       <div class="root" id="root"></div>
+      <div class="memo-edit">
+        <textarea id="memoryMethodInput" class="memo-input" placeholder="填写词根词缀/记忆方法..."></textarea>
+        <button class="btn ghost memo-save" onclick="saveMemoryMethod(event)">保存记忆法</button>
+      </div>
     </div>
   </div>
 
@@ -49,10 +53,50 @@
     <div class="stat-card"><span>连续学习</span><b id="sStreak">1 天</b></div>
   </div>
 
-  <div class="bottom">
+  <div class="bottom actions-row">
     <button class="delete" onclick="deleteWord(event)">删除当前词</button>
+    <button class="delete" onclick="openHistoryModal(event)">查看短文</button>
+    <button class="delete" onclick="openSettingsModal()">API设置</button>
   </div>
 </div>
+
+<div class="modal hidden" id="passageModal">
+  <div class="modal-card">
+    <h3>短文测试</h3>
+    <p class="modal-hint">红色单词可点击查看中文释义</p>
+    <div id="passageContent" class="passage-content"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closePassageModal()">关闭</button>
+      <button class="btn know" onclick="closePassageModal(true)">开始下一组</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="historyModal">
+  <div class="modal-card">
+    <h3>历史短文</h3>
+    <div id="historyList" class="history-list"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeHistoryModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal hidden" id="settingsModal">
+  <div class="modal-card">
+    <h3>API 设置</h3>
+    <p class="modal-hint">为安全起见，Key 仅保存在当前浏览器本地。</p>
+    <input id="apiKeyInput" class="api-input" placeholder="输入 shiyunapi key">
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeSettingsModal()">取消</button>
+      <button class="btn know" onclick="saveApiKey()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
 <script src="app.js"></script>
 </body>
 </html>
