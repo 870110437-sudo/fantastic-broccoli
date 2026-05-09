@@ -32,7 +32,7 @@ if (!userId) {
 
 const savedGenKey = localStorage.getItem("genApiKey");
 if (!savedGenKey) {
-   showToast('未配置生成 API Key，请先点 "API设置"');
+  showToast('未配置生成 API Key，请先点 "API设置"');
 }
 
 function showToast(message) {
