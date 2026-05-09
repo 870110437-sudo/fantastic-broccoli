@@ -229,29 +229,75 @@ async function nextWord() {
 // 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
 async function generatePassage(words) {
   const genKey = localStorage.getItem("genApiKey");
-  if (!genKey) throw new Error("缺少API key");
-  const wordPairs = words.map(w => `${w.word}: ${w.meaning}`).join("\n");
-  const prompt = `请用以下10个英语单词写一个120词以内自然短文，要求：\n1) 必须包含所有单词且每个只出现一次\n2) 仅返回 JSON 格式 {\"passage\":\"...\"}\n单词列表:\n${wordPairs}`;
-  
+
+  // 调试：看看有没有读到 key
+  console.log("读取到 genKey:", genKey);
+
+  if (!genKey) {
+    throw new Error("缺少API key");
+  }
+
+  const wordPairs = words
+    .map(w => `${w.word}: ${w.meaning}`)
+    .join("\n");
+
+  const prompt = `
+请用以下10个英语单词写一个120词以内自然短文，要求：
+1. 必须包含所有单词
+2. 每个单词只出现一次
+3. 只返回 JSON 格式：
+{"passage":"短文内容"}
+
+单词列表：
+${wordPairs}
+`;
+
   const res = await fetch(`${GEN_BASE_URL}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${genKey}` },
-    body: JSON.stringify({ model: CHEAP_MODEL, temperature: 0.4, messages: [{ role: "system", content: "You are a concise English writing assistant." }, { role: "user", content: prompt }] })
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${genKey}`
+    },
+    body: JSON.stringify({
+      model: CHEAP_MODEL,
+      temperature: 0.4,
+      messages: [
+        {
+          role: "system",
+          content: "You are a concise English writing assistant."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    })
   });
-  
-  if (!res.ok) throw new Error("短文生成失败");
+
+  if (!res.ok) {
+    throw new Error("短文生成失败");
+  }
+
   const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content?.trim() || "{}";
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
+
+  let raw =
+    data.choices?.[0]?.message?.content?.trim() || "{}";
+
+  // 修复：去掉 ```json ``` 包裹
+  raw = raw
+    .replace(/^```json/, "")
+    .replace(/^```/, "")
+    .replace(/```$/, "")
+    .trim();
+
+  const parsed = JSON.parse(raw);
+
+  if (!parsed.passage) {
     throw new Error("模型返回格式错误");
   }
-  if (!parsed.passage || typeof parsed.passage !== "string") throw new Error("模型返回格式错误");
+
   return parsed.passage;
 }
-
 // 修复：仅保留一个renderPassageWithHighlights函数，使用textContent避免XSS
 function renderPassageWithHighlights(passage, words) {
   const dict = new Map(words.map(w => [String(w.word || "").toLowerCase(), w.meaning || "暂无释义"]));
