@@ -1,28 +1,19 @@
-// ========== 常量配置 ==========
+// 凭证应通过环境变量或后端API获取，不要在客户端硬编码
+const APP_ID = localStorage.getItem("appId") || ""; // 从localStorage获取
+const APP_KEY = localStorage.getItem("appKey") || ""; // 从localStorage获取
 const BASE_URL = "https://api.codenow.cn/1/classes";
 const GEN_BASE_URL = "https://shiyunapi.com/v1";
 const CHEAP_MODEL = "deepseek-chat";
-const GROUP_SIZE = 10;
 
-const studyModes = { EN_TO_CN: "en", CN_TO_EN: "cn" };
-
-// 模式渲染配置 抽离到全局
-const modeRenderConfig = {
-  [studyModes.EN_TO_CN]: {
-    primary: () => currentWord.word || "-",
-    meta: () => `${currentWord.IPA ?? ""} ${currentWord.pos ?? ""}`.trim(),
-    meaning: () => currentWord.meaning || "暂无释义",
-    example: () => currentWord.example?.trim() ? `例句: ${currentWord.example}` : "例句: 暂无"
-  },
-  [studyModes.CN_TO_EN]: {
-    primary: () => currentWord.meaning || "暂无释义",
-    meta: () => "先回忆英文，再点击查看",
-    meaning: () => `${currentWord.word || "-"} ${currentWord.IPA ?? ""}`.trim(),
-    example: () => currentWord.pos ? `词性: ${currentWord.pos}` : "词性: 暂无"
-  }
+const headers = {
+  "X-Bmob-Application-Id": APP_ID,
+  "X-Bmob-REST-API-Key": APP_KEY,
+  "Content-Type": "application/json"
 };
 
-// ========== 全局状态变量 ==========
+const studyModes = { EN_TO_CN: "en", CN_TO_EN: "cn" };
+const GROUP_SIZE = 10;
+
 let currentWord = null;
 let expanded = false;
 let currentMode = studyModes.EN_TO_CN;
@@ -30,138 +21,67 @@ let currentIndex = 0;
 let inWrongReview = false;
 let pendingNextSession = false;
 
-const state = { 
-  groupWords: [], 
-  wrongWords: [], 
-  todayDone: 0, 
-  todayNew: 0, 
-  phaseDone: 0, 
-  streak: 1 
-};
+const state = { groupWords: [], wrongWords: [], todayDone: 0, todayNew: 0, phaseDone: 0, streak: 1 };
 
-// ========== 核心关键：动态获取请求头（解决连不上数据库核心BUG） ==========
-function getHeaders() {
-  const appId = localStorage.getItem("appId") || "";
-  const appKey = localStorage.getItem("appKey") || "";
-  return {
-    "X-Bmob-Application-Id": appId,
-    "X-Bmob-REST-API-Key": appKey,
-    "Content-Type": "application/json"
-  };
-}
-
-// 校验Bmob密钥是否配置
-function checkBmobAuth() {
-  const appId = localStorage.getItem("appId");
-  const appKey = localStorage.getItem("appKey");
-  if (!appId || !appKey) {
-    showToast("未配置Bmob密钥，无法连接数据库，请先去设置填写");
-    return false;
-  }
-  return true;
-}
-
-// ========== 用户ID初始化 ==========
+// 修复：删除重复的userId赋值，只保留一次
 let userId = localStorage.getItem("userId");
 if (!userId) {
   userId = (prompt("请输入用户名") || "").trim().slice(0, 32) || `guest_${Date.now()}`;
   localStorage.setItem("userId", userId);
 }
 
-// ========== 生成API密钥检查 ==========
 const savedGenKey = localStorage.getItem("genApiKey");
 if (!savedGenKey) {
-  showToast("未配置生成 API Key，请先点「API设置」");
+   showToast('未配置生成 API Key，请先点 "API设置"');
 }
 
-// ========== 工具方法 ==========
 function showToast(message) {
   const toast = document.getElementById("toast");
-  if (!toast) return;
+  if (!toast) return; // 安全检查
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 1800);
 }
 
 function escapeHtml(text = "") {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-// ========== 单词数据库请求（全部加异常捕获 + 密钥校验） ==========
 async function getRandomWord() {
-  if (!checkBmobAuth()) return null;
-  try {
-    const skip = Math.floor(Math.random() * 120);
-    const res = await fetch(`${BASE_URL}/Words?limit=1&skip=${skip}`, { headers: getHeaders() });
-    if (!res.ok) throw new Error("接口响应异常");
-    const data = await res.json();
-    return data.results?.[0] || null;
-  } catch (e) {
-    showToast("连接数据库失败，请检查密钥或网络");
-    return null;
-  }
+  const skip = Math.floor(Math.random() * 120);
+  const res = await fetch(`${BASE_URL}/Words?limit=1&skip=${skip}`, { headers });
+  const data = await res.json();
+  return data.results?.[0] || null;
 }
 
 async function getWordGroup(size = GROUP_SIZE) {
-  if (!checkBmobAuth()) return [];
   const map = new Map();
   let tries = 0;
   while (map.size < size && tries < size * 12) {
     const w = await getRandomWord();
     tries += 1;
-    if (w?.objectId && !map.has(w.objectId)) {
-      map.set(w.objectId, { ...w, known_en: false, known_cn: false, wrongCount: w.wrongCount || 0 });
-    }
+    if (w?.objectId && !map.has(w.objectId)) map.set(w.objectId, { ...w, known_en: false, known_cn: false, wrongCount: w.wrongCount || 0 });
   }
   return Array.from(map.values());
 }
 
 async function saveWord(status) {
-  if (!checkBmobAuth() || !currentWord) return;
-  try {
-    const where = encodeURIComponent(JSON.stringify({ 
-      userId, 
-      wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId } 
-    }));
-    const findRes = await fetch(`${BASE_URL}/userwords?where=${where}`, { headers: getHeaders() });
-    const findData = await findRes.json();
-
-    if (findData.results?.length) {
-      const record = findData.results[0];
-      await fetch(`${BASE_URL}/userwords/${record.objectId}`, { 
-        method: "PUT", 
-        headers: getHeaders(), 
-        body: JSON.stringify({ status, reviewCount: (record.reviewCount || 0) + 1 }) 
-      });
-    } else {
-      await fetch(`${BASE_URL}/userwords`, { 
-        method: "POST", 
-        headers: getHeaders(), 
-        body: JSON.stringify({ 
-          userId, 
-          wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId }, 
-          status, 
-          reviewCount: 1 
-        }) 
-      });
-    }
-  } catch (e) {
-    showToast("保存学习记录失败");
+  if (!currentWord) return;
+  const where = encodeURIComponent(JSON.stringify({ userId, wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId } }));
+  const findRes = await fetch(`${BASE_URL}/userwords?where=${where}`, { headers });
+  const findData = await findRes.json();
+  if (findData.results?.length) {
+    const record = findData.results[0];
+    await fetch(`${BASE_URL}/userwords/${record.objectId}`, { method: "PUT", headers, body: JSON.stringify({ status, reviewCount: (record.reviewCount || 0) + 1 }) });
+  } else {
+    await fetch(`${BASE_URL}/userwords`, { method: "POST", headers, body: JSON.stringify({ userId, wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId }, status, reviewCount: 1 }) });
   }
 }
 
-// ========== 界面交互 ==========
 function switchMode(mode) {
   if (currentMode === mode || inWrongReview) return;
   currentMode = mode;
-  document.querySelectorAll(".seg-btn").forEach(btn => 
-    btn.classList.toggle("active", btn.dataset.mode === mode)
-  );
+  document.querySelectorAll(".seg-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === mode));
   document.getElementById("segIndicator").style.transform = mode === "en" ? "translateX(0)" : "translateX(100%)";
   flipCard();
   renderWord();
@@ -194,22 +114,39 @@ function renderWord() {
   
   expanded = false;
   document.getElementById("card").classList.remove("expanded");
-
-  // 公共记忆法逻辑
-  const memory = currentWord.memorymethod || currentWord.root || "";
-  root.textContent = memory ? `词根词缀: ${memory}` : "词根词缀: 预留";
-  memoryMethodInput.value = currentWord.memorymethod || "";
-
-  // 渲染赋值
-  const renderRule = modeRenderConfig[currentMode];
-  if (renderRule) {
-    primary.textContent = renderRule.primary();
-    meta.textContent = renderRule.meta();
-    meaning.textContent = renderRule.meaning();
-    example.textContent = renderRule.example();
+  
+ // 模式配置映射，把两种模式的渲染规则写死在这里
+const modeRenderConfig = {
+  [studyModes.EN_TO_CN]: {
+    primary: () => currentWord.word || "-",
+    meta: () => `${currentWord.IPA ?? ""} ${currentWord.pos ?? ""}`.trim(),
+    meaning: () => currentWord.meaning || "暂无释义",
+    example: () => currentWord.example?.trim() ? `例句: ${currentWord.example}` : "例句: 暂无"
+  },
+  // 反向模式
+  [studyModes.CN_TO_EN]: {
+    primary: () => currentWord.meaning || "暂无释义",
+    meta: () => "先回忆英文，再点击查看",
+    meaning: () => `${currentWord.word || "-"} ${currentWord.IPA ?? ""}`.trim(),
+    example: () => currentWord.pos ? `词性: ${currentWord.pos}` : "词性: 暂无"
   }
+};
 
-  updateProgress();
+// 公共逻辑（和模式无关，抽离出来，只写一次）
+const memory = currentWord.memorymethod || currentWord.root || "";
+root.textContent = memory ? `词根词缀: ${memory}` : "词根词缀: 预留";
+memoryMethodInput.value = currentWord.memorymethod || "";
+
+// 根据当前模式直接拿配置渲染
+const renderRule = modeRenderConfig[currentMode];
+if (renderRule) {
+  primary.textContent = renderRule.primary();
+  meta.textContent = renderRule.meta();
+  meaning.textContent = renderRule.meaning();
+  example.textContent = renderRule.example();
+}
+
+updateProgress();
 }
 
 function playAudio(event, slow = false) { 
@@ -220,16 +157,17 @@ function playAudio(event, slow = false) {
   a.play();
 }
 
+// 修复：删除重复变量声明，保留一个清晰的赋值流程
 async function saveMemoryMethod(event) {
   if (event) event.stopPropagation();
-  if (!checkBmobAuth() || !currentWord?.objectId) return;
+  if (!currentWord?.objectId) return;
   const input = document.getElementById("memoryMethodInput");
   if (!input) return;
   const memorymethod = input.value.trim().slice(0, 300);
   try {
     await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, {
       method: "PUT",
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify({ memorymethod })
     });
     currentWord.memorymethod = memorymethod;
@@ -247,9 +185,7 @@ async function handleKnow(known, event) {
   currentWord[key] = known;
   if (!known) {
     currentWord.wrongCount = (currentWord.wrongCount || 0) + 1;
-    if (!state.wrongWords.find(w => w.objectId === currentWord.objectId)) {
-      state.wrongWords.push(currentWord);
-    }
+    if (!state.wrongWords.find(w => w.objectId === currentWord.objectId)) state.wrongWords.push(currentWord);
   }
   state.todayDone += 1;
   state.phaseDone += 1;
@@ -283,30 +219,17 @@ async function nextWord() {
   renderWord();
 }
 
+// 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
 async function generatePassage(words) {
   const genKey = localStorage.getItem("genApiKey");
   if (!genKey) throw new Error("缺少API key");
   const wordPairs = words.map(w => `${w.word}: ${w.meaning}`).join("\n");
-  const prompt = `请用以下10个英语单词写一个120词以内自然短文，要求：
-1) 必须包含所有单词且每个只出现一次
-2) 仅返回 JSON 格式 {"passage":"..."}
-单词列表:
-${wordPairs}`;
+  const prompt = `请用以下10个英语单词写一个120词以内自然短文，要求：\n1) 必须包含所有单词且每个只出现一次\n2) 仅返回 JSON 格式 {\"passage\":\"...\"}\n单词列表:\n${wordPairs}`;
   
   const res = await fetch(`${GEN_BASE_URL}/chat/completions`, {
     method: "POST",
-    headers: { 
-      "Content-Type": "application/json", 
-      Authorization: `Bearer ${genKey}` 
-    },
-    body: JSON.stringify({ 
-      model: CHEAP_MODEL, 
-      temperature: 0.4, 
-      messages: [
-        { role: "system", content: "You are a concise English writing assistant." }, 
-        { role: "user", content: prompt }
-      ] 
-    })
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${genKey}` },
+    body: JSON.stringify({ model: CHEAP_MODEL, temperature: 0.4, messages: [{ role: "system", content: "You are a concise English writing assistant." }, { role: "user", content: prompt }] })
   });
   
   if (!res.ok) throw new Error("短文生成失败");
@@ -318,12 +241,11 @@ ${wordPairs}`;
   } catch (e) {
     throw new Error("模型返回格式错误");
   }
-  if (!parsed.passage || typeof parsed.passage !== "string") {
-    throw new Error("模型返回格式错误");
-  }
+  if (!parsed.passage || typeof parsed.passage !== "string") throw new Error("模型返回格式错误");
   return parsed.passage;
 }
 
+// 修复：仅保留一个renderPassageWithHighlights函数，使用textContent避免XSS
 function renderPassageWithHighlights(passage, words) {
   const dict = new Map(words.map(w => [String(w.word || "").toLowerCase(), w.meaning || "暂无释义"]));
   const frag = document.createDocumentFragment();
@@ -334,9 +256,9 @@ function renderPassageWithHighlights(passage, words) {
     if (dict.has(key)) {
       const span = document.createElement("span");
       span.className = "hl-word";
-      span.textContent = p;
+      span.textContent = p; // 使用textContent而非innerHTML避免XSS
       const meaning = dict.get(key);
-      span.title = meaning;
+      span.title = meaning; // 使用title属性作为提示
       span.style.cursor = "pointer";
       span.onclick = () => showToast(`${span.textContent}：${meaning}`);
       frag.appendChild(span);
@@ -353,18 +275,10 @@ function renderPassageWithHighlights(passage, words) {
 }
 
 async function savePassage(minitext) {
-  if (!checkBmobAuth()) return;
-  try {
-    await fetch(`${BASE_URL}/shortpassage`, { 
-      method: "POST", 
-      headers: getHeaders(), 
-      body: JSON.stringify({ minitext, userId, score: Date.now() }) 
-    });
-  } catch (e) {
-    showToast("短文记录保存失败");
-  }
+  await fetch(`${BASE_URL}/shortpassage`, { method: "POST", headers, body: JSON.stringify({ minitext, userId, score: Date.now() }) });
 }
 
+// 修复：修复错误处理，避免无限递归
 async function openPassageTest(words) {
   const passageModal = document.getElementById("passageModal");
   const passageContent = document.getElementById("passageContent");
@@ -381,6 +295,7 @@ async function openPassageTest(words) {
     renderPassageWithHighlights(passage, words);
   } catch (e) {
     passageContent.textContent = `短文生成失败：${e.message}。请检查API设置后再试。`;
+    // 移除递归调用以避免无限循环
   }
 }
 
@@ -406,14 +321,9 @@ async function openHistoryModal(event) {
     historyModal.classList.remove("hidden");
   }
   
-  if (!checkBmobAuth()) {
-    list.textContent = "无密钥，无法加载历史";
-    return;
-  }
-
   try {
     const where = encodeURIComponent(JSON.stringify({ userId }));
-    const res = await fetch(`${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`, { headers: getHeaders() });
+    const res = await fetch(`${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`, { headers });
     const data = await res.json();
     const rows = data.results || [];
     
@@ -428,9 +338,9 @@ async function openHistoryModal(event) {
       item.className = "history-item";
       const time = document.createElement("div");
       time.className = "time";
-      time.textContent = escapeHtml(r.createdAt || "");
+      time.textContent = escapeHtml(r.createdAt || ""); // 使用textContent避免XSS
       const text = document.createElement("div");
-      text.textContent = escapeHtml(r.minitext || "");
+      text.textContent = escapeHtml(r.minitext || ""); // 使用textContent避免XSS
       item.appendChild(time);
       item.appendChild(text);
       list.appendChild(item);
@@ -503,32 +413,22 @@ function updateProgress() {
 
 async function deleteWord(event) {
   if (event) event.stopPropagation();
-  if (!checkBmobAuth() || !currentWord) return;
+  if (!currentWord) return;
   if (!confirm(`确定删除单词：${currentWord.word} 吗？`)) return;
   
-  try {
-    await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, { 
-      method: "DELETE", 
-      headers: getHeaders() 
-    });
-    state.groupWords = state.groupWords.filter(w => w.objectId !== currentWord.objectId);
-    state.wrongWords = state.wrongWords.filter(w => w.objectId !== currentWord.objectId);
-    
-    const queue = inWrongReview ? state.wrongWords : state.groupWords;
-    if (!queue.length) return startSession();
-    if (currentIndex >= queue.length) currentIndex = queue.length - 1;
-    
-    currentWord = queue[currentIndex];
-    renderWord();
-  } catch (e) {
-    showToast("删除单词失败");
-  }
+  await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, { method: "DELETE", headers });
+  state.groupWords = state.groupWords.filter(w => w.objectId !== currentWord.objectId);
+  state.wrongWords = state.wrongWords.filter(w => w.objectId !== currentWord.objectId);
+  
+  const queue = inWrongReview ? state.wrongWords : state.groupWords;
+  if (!queue.length) return startSession();
+  if (currentIndex >= queue.length) currentIndex = queue.length - 1;
+  
+  currentWord = queue[currentIndex];
+  renderWord();
 }
 
 async function startSession() {
-  // 启动先校验密钥
-  if (!checkBmobAuth()) return;
-
   state.groupWords = await getWordGroup(GROUP_SIZE);
   state.wrongWords = [];
   currentMode = studyModes.EN_TO_CN;
@@ -542,9 +442,7 @@ async function startSession() {
     segIndicator.style.transform = "translateX(0)";
   }
   
-  document.querySelectorAll(".seg-btn").forEach(btn => 
-    btn.classList.toggle("active", btn.dataset.mode === "en")
-  );
+  document.querySelectorAll(".seg-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === "en"));
   
   currentWord = state.groupWords[0] || null;
   
@@ -559,5 +457,4 @@ async function startSession() {
   renderWord();
 }
 
-// 启动
 startSession();
