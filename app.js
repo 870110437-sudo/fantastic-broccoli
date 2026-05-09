@@ -94,10 +94,18 @@ function flipCard() {
   card.classList.add("flip"); 
 }
 
-function toggleExpand(event) { 
-  if (event.target.closest("button")) return; 
-  expanded = !expanded; 
-  document.getElementById("card").classList.toggle("expanded", expanded); 
+function toggleExpand(event) {
+  // 点击按钮、输入框、文本域时，不触发展开/收起
+  if (
+    event.target.closest("button") ||
+    event.target.closest("input") ||
+    event.target.closest("textarea")
+  ) {
+    return;
+  }
+
+  expanded = !expanded;
+  document.getElementById("card").classList.toggle("expanded", expanded);
 }
 
 function renderWord() {
