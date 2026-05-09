@@ -171,7 +171,7 @@ async function saveMemoryMethod(event) {
       body: JSON.stringify({ memorymethod })
     });
     currentWord.memorymethod = memorymethod;
-    document.getElementById("root").textContent = memorymethod ? `词根词缀：${memorymethod}` : "词根词缀：预留";
+   document.getElementById("root").textContent =memorymethod ? `词根词缀: ${memorymethod}` : "词根词缀: 预留";
     showToast("记忆法已保存");
   } catch (e) {
     showToast("保存失败，请稍后重试");
