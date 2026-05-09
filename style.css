@@ -76,3 +76,6 @@ body {
 .history-item { border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; line-height: 1.6; }
 .history-item .time { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
 @media (max-width: 520px) { .topbar { flex-direction: column; gap: 8px; } .app { width: 100%; } }
+.api-input { width: 100%; border: 1px solid #d1d5db; border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: #111827; color: #fff; padding: 10px 14px; border-radius: 999px; opacity: 0; transition: all .2s ease; pointer-events: none; font-size: 13px; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

@@ -52,6 +52,7 @@
   <div class="bottom actions-row">
     <button class="delete" onclick="deleteWord(event)">删除当前词</button>
     <button class="delete" onclick="openHistoryModal(event)">查看短文</button>
+    <button class="delete" onclick="openSettingsModal()">API设置</button>
   </div>
 </div>
 
@@ -76,6 +77,21 @@
     </div>
   </div>
 </div>
+
+
+<div class="modal hidden" id="settingsModal">
+  <div class="modal-card">
+    <h3>API 设置</h3>
+    <p class="modal-hint">为安全起见，Key 仅保存在当前浏览器本地。</p>
+    <input id="apiKeyInput" class="api-input" placeholder="输入 shiyunapi key">
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeSettingsModal()">取消</button>
+      <button class="btn know" onclick="saveApiKey()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
 
 <script src="app.js"></script>
 </body>
