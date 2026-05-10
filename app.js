@@ -269,7 +269,7 @@ function toggleExpand(event) {
   document.getElementById("card").classList.toggle("expanded", expanded);
 }
 
-function renderWord() {
+async function renderWord() {
   if (!currentWord) return;
   const primary = document.getElementById("primary");
   const meta = document.getElementById("meta");
@@ -284,78 +284,277 @@ function renderWord() {
   document.getElementById("card").classList.remove("expanded");
   
  // 模式配置映射，把两种模式的渲染规则写死在这里
-const modeRenderConfig = {
-  [studyModes.EN_TO_CN]: {
-    primary: () => currentWord.word || "-",
-    meta: () => `${currentWord.IPA ?? ""} ${currentWord.pos ?? ""}`.trim(),
-    meaning: () => currentWord.meaning || "暂无释义",
-    example: () => currentWord.example?.trim() ? `例句: ${currentWord.example}` : "例句: 暂无"
-  },
-  // 反向模式
-  [studyModes.CN_TO_EN]: {
-    primary: () => currentWord.meaning || "暂无释义",
-    meta: () => "先回忆英文，再点击查看",
-    meaning: () => `${currentWord.word || "-"} ${currentWord.IPA ?? ""}`.trim(),
-    example: () => currentWord.pos ? `词性: ${currentWord.pos}` : "词性: 暂无"
+// 渲染单词卡片
+async function renderWord() {
+  if (!currentWord) return;
+
+  const primary = document.getElementById("primary");
+  const meta = document.getElementById("meta");
+  const meaning = document.getElementById("meaning");
+  const example = document.getElementById("example");
+  const root = document.getElementById("root");
+  const memoryMethodInput = document.getElementById("memoryMethodInput");
+
+  if (
+    !primary ||
+    !meta ||
+    !meaning ||
+    !example ||
+    !root ||
+    !memoryMethodInput
+  ) return;
+
+  expanded = false;
+  document
+    .getElementById("card")
+    .classList.remove("expanded");
+
+  // ===== 1. 查免费词典 =====
+  const dictInfo = await fetchWordInfo(
+    currentWord.word
+  );
+
+  // 保存发音地址
+  window.currentAudioUrl =
+    dictInfo.audio || "";
+
+  // ===== 2. 自动生成词根联想（只生成一次）=====
+  let memory =
+    currentWord.memorymethod ||
+    currentWord.root ||
+    "";
+
+  if (!memory) {
+    root.textContent =
+      "词根词缀: 生成中...";
+
+    const generated =
+      await generateMemoryMethod(
+        currentWord.word,
+        currentWord.meaning
+      );
+
+    if (generated) {
+      memory = generated;
+
+      // 更新当前对象
+      currentWord.memorymethod =
+        generated;
+
+      // 写回数据库
+      try {
+        await fetch(
+          `${BASE_URL}/Words/${currentWord.objectId}`,
+          {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({
+              memorymethod:
+                generated
+            })
+          }
+        );
+      } catch (err) {
+        console.error(
+          "写回词根失败",
+          err
+        );
+      }
+    }
   }
-};
 
-// 公共逻辑（和模式无关，抽离出来，只写一次）
-const memory = currentWord.memorymethod || currentWord.root || "";
-root.textContent = memory ? `词根词缀: ${memory}` : "词根词缀: 预留";
-memoryMethodInput.value = currentWord.memorymethod || "";
+  root.textContent = memory
+    ? `词根词缀: ${memory}`
+    : "词根词缀: 暂无";
 
-// 根据当前模式直接拿配置渲染
-const renderRule = modeRenderConfig[currentMode];
-if (renderRule) {
-  primary.textContent = renderRule.primary();
-  meta.textContent = renderRule.meta();
-  meaning.textContent = renderRule.meaning();
-  example.textContent = renderRule.example();
+  memoryMethodInput.value =
+    memory;
+
+  // ===== 3. 模式渲染 =====
+  const modeRenderConfig = {
+    [studyModes.EN_TO_CN]: {
+      primary: () =>
+        currentWord.word || "-",
+
+      meta: () =>
+        `${dictInfo.phonetic} ${dictInfo.pos}`.trim(),
+
+      meaning: () =>
+        currentWord.meaning ||
+        "暂无释义",
+
+      example: () =>
+        dictInfo.example
+          ? `例句: ${dictInfo.example}`
+          : "例句: 暂无"
+    },
+
+    [studyModes.CN_TO_EN]: {
+      primary: () =>
+        currentWord.meaning ||
+        "暂无释义",
+
+      meta: () =>
+        "先回忆英文，再点击查看",
+
+      meaning: () =>
+        `${currentWord.word || "-"} ${dictInfo.phonetic}`.trim(),
+
+      example: () =>
+        dictInfo.pos
+          ? `词性: ${dictInfo.pos}`
+          : "词性: 暂无"
+    }
+  };
+
+  const renderRule =
+    modeRenderConfig[currentMode];
+
+  if (renderRule) {
+    primary.textContent =
+      renderRule.primary();
+
+    meta.textContent =
+      renderRule.meta();
+
+    meaning.textContent =
+      renderRule.meaning();
+
+    example.textContent =
+      renderRule.example();
+  }
+
+  updateProgress();
 }
 
-updateProgress();
-}
-//发音
-async function playPronunciation() {
-  const word = currentWord.word;
 
-  if (!word) {
-    showToast("没有单词");
-    return;
-  }
-
+// 免费词典 API
+async function fetchWordInfo(word) {
   try {
-    // 查询免费词典 API
     const res = await fetch(
       `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
     );
 
     const data = await res.json();
+    const entry = data[0];
 
-    // 找到第一个有 audio 的发音
-    let audioUrl = "";
+    return {
+      phonetic:
+        entry.phonetic ||
+        entry.phonetics?.find(
+          x => x.text
+        )?.text ||
+        "",
 
-    for (const phonetic of data[0]?.phonetics || []) {
-      if (phonetic.audio) {
-        audioUrl = phonetic.audio;
-        break;
-      }
-    }
+      audio:
+        entry.phonetics?.find(
+          x => x.audio
+        )?.audio ||
+        "",
 
-    if (!audioUrl) {
-      showToast("没有找到发音");
-      return;
-    }
+      pos:
+        entry.meanings?.[0]
+          ?.partOfSpeech || "",
 
-    // 播放
-    const audio = new Audio(audioUrl);
-    audio.play();
+      example:
+        entry.meanings?.[0]
+          ?.definitions?.find(
+            x => x.example
+          )?.example || ""
+    };
 
   } catch (err) {
-    console.error(err);
-    showToast("发音加载失败");
+    console.error(
+      "词典查询失败",
+      err
+    );
+
+    return {
+      phonetic: "",
+      audio: "",
+      pos: "",
+      example: ""
+    };
   }
+}
+
+
+// DeepSeek 自动生成词根联想
+async function generateMemoryMethod(
+  word,
+  meaning
+) {
+  const genKey =
+    localStorage.getItem(
+      "genApiKey"
+    );
+
+  if (!genKey) {
+    console.warn(
+      "未设置生成 API Key"
+    );
+    return "";
+  }
+
+  try {
+    const res = await fetch(
+      "https://shiyunapi.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+          Authorization:
+            `Bearer ${genKey}`
+        },
+        body: JSON.stringify({
+          model:
+            "deepseek-chat",
+          messages: [
+            {
+              role: "user",
+              content:
+                `请为英语单词 ${word}（意思：${meaning}）生成简短词根词缀联想记忆法，控制在30字以内，只返回结果，不要解释。`
+            }
+          ]
+        })
+      }
+    );
+
+    const data =
+      await res.json();
+
+    return (
+      data.choices?.[0]
+        ?.message?.content?.trim() ||
+      ""
+    );
+
+  } catch (err) {
+    console.error(
+      "生成词根联想失败",
+      err
+    );
+
+    return "";
+  }
+}
+
+
+// 发音
+function playPronunciation() {
+  if (
+    !window.currentAudioUrl
+  ) {
+    showToast(
+      "没有发音"
+    );
+    return;
+  }
+
+  new Audio(
+    window.currentAudioUrl
+  ).play();
 }
 // 修复：删除重复变量声明，保留一个清晰的赋值流程
 async function saveMemoryMethod(event) {
