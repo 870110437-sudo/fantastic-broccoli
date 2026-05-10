@@ -316,15 +316,47 @@ if (renderRule) {
 
 updateProgress();
 }
+//发音
+async function playPronunciation() {
+  const word = currentWord.word;
 
-function playAudio(event, slow = false) { 
-  if (event) event.stopPropagation(); 
-  if (!currentWord?.pronunciation) return alert("没有发音"); 
-  const a = new Audio(currentWord.pronunciation); 
-  a.playbackRate = slow ? 0.75 : 1;
-  a.play();
+  if (!word) {
+    showToast("没有单词");
+    return;
+  }
+
+  try {
+    // 查询免费词典 API
+    const res = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
+    );
+
+    const data = await res.json();
+
+    // 找到第一个有 audio 的发音
+    let audioUrl = "";
+
+    for (const phonetic of data[0]?.phonetics || []) {
+      if (phonetic.audio) {
+        audioUrl = phonetic.audio;
+        break;
+      }
+    }
+
+    if (!audioUrl) {
+      showToast("没有找到发音");
+      return;
+    }
+
+    // 播放
+    const audio = new Audio(audioUrl);
+    audio.play();
+
+  } catch (err) {
+    console.error(err);
+    showToast("发音加载失败");
+  }
 }
-
 // 修复：删除重复变量声明，保留一个清晰的赋值流程
 async function saveMemoryMethod(event) {
   if (event) event.stopPropagation();
