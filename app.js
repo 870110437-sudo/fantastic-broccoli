@@ -37,6 +37,23 @@ function showToast(message) {
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 1800);
 }
+//缓存占位符
+function showLoading(text = "AI生成中...") {
+  const overlay = document.getElementById("loadingOverlay");
+  if (!overlay) return;
+
+  const label = overlay.querySelector(".loading-text");
+  if (label) label.textContent = text;
+
+  overlay.classList.remove("hidden");
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (!overlay) return;
+
+  overlay.classList.add("hidden");
+}
 
 function escapeHtml(text = "") {
   return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -261,11 +278,13 @@ async function renderWord() {
     root.textContent =
       "词根词缀: 生成中...";
 
-    const generated =
-      await generateMemoryMethod(
-        currentWord.word,
-        currentWord.meaning
-      );
+  showLoading("正在生成词根记忆...");
+const generated =
+  await generateMemoryMethod(
+    currentWord.word,
+    currentWord.meaning
+  );
+hideLoading();
 
     if (generated) {
       memory = generated;
@@ -670,6 +689,7 @@ async function openPassageTest(words) {
     await savePassage(passage);
     renderPassageWithHighlights(passage, words);
   } catch (e) {
+    hideLoading();
     passageContent.textContent = `短文生成失败：${e.message}。请检查 后再试。`;
     // 移除递归调用以避免无限循环
   }
@@ -722,6 +742,7 @@ async function openHistoryModal(event) {
       list.appendChild(item);
     });
   } catch (e) {
+    hideLoading();
     list.textContent = "加载失败";
   }
 }
