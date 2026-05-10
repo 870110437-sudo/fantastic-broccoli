@@ -3,7 +3,7 @@ const APP_KEY = "2efd06f7769a606544357909a7503793";
 const BASE_URL = "https://api.codenow.cn/1/classes";
 const GEN_BASE_URL = "https://shiyunapi.com/v1";
 const CHEAP_MODEL = "deepseek-chat";
-
+const GEN_API_KEY = "sk-Cc6RjpYaHQmyJctCxaJEVjOcroZCvQZTwe7PQRiXDBpGZcsd";
 const headers = {
   "X-Bmob-Application-Id": APP_ID,
   "X-Bmob-REST-API-Key": APP_KEY,
@@ -29,10 +29,6 @@ if (!userId) {
   localStorage.setItem("userId", userId);
 }
 
-const savedGenKey = localStorage.getItem("genApiKey");
-if (!savedGenKey) {
-  showToast('未配置生成 API Key，请先点 "API设置"');
-}
 
 function showToast(message) {
   const toast = document.getElementById("toast");
@@ -421,10 +417,7 @@ async function generateMemoryMethod(
   word,
   meaning
 ) {
-  const genKey =
-    localStorage.getItem(
-      "genApiKey"
-    );
+const genKey = GEN_API_KEY;
 
   if (!genKey) {
     console.warn(
@@ -558,7 +551,7 @@ async function nextWord() {
 
 // 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
 async function generatePassage(words) {
-  const genKey = localStorage.getItem("genApiKey");
+ const genKey = GEN_API_KEY;
 
   // 调试：看看有没有读到 key
   console.log("读取到 genKey:", genKey);
@@ -677,7 +670,7 @@ async function openPassageTest(words) {
     await savePassage(passage);
     renderPassageWithHighlights(passage, words);
   } catch (e) {
-    passageContent.textContent = `短文生成失败：${e.message}。请检查API设置后再试。`;
+    passageContent.textContent = `短文生成失败：${e.message}。请检查 后再试。`;
     // 移除递归调用以避免无限循环
   }
 }
@@ -738,39 +731,6 @@ function closeHistoryModal() {
   if (historyModal) {
     historyModal.classList.add("hidden");
   }
-}
-
-function openSettingsModal() {
-  const apiKeyInput = document.getElementById("apiKeyInput");
-  if (apiKeyInput) {
-    apiKeyInput.value = localStorage.getItem("genApiKey") || "";
-  }
-  const settingsModal = document.getElementById("settingsModal");
-  if (settingsModal) {
-    settingsModal.classList.remove("hidden");
-  }
-}
-
-function closeSettingsModal() { 
-  const settingsModal = document.getElementById("settingsModal");
-  if (settingsModal) {
-    settingsModal.classList.add("hidden");
-  }
-}
-
-function saveApiKey() {
-  const apiKeyInput = document.getElementById("apiKeyInput");
-  if (!apiKeyInput) return;
-  
-  const key = apiKeyInput.value.trim();
-  if (!key.startsWith("sk-")) {
-    showToast("Key 格式不正确");
-    return;
-  }
-  
-  localStorage.setItem("genApiKey", key);
-  closeSettingsModal();
-  showToast("API Key 已保存");
 }
 
 function updateProgress() {
