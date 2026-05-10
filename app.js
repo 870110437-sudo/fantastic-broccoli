@@ -196,57 +196,7 @@ function switchMode(mode) {
   flipCard();
   renderWord();
 }
-async function loadStudyProgress() {
-  const currentUserId = localStorage.getItem("userId");
 
-  if (!currentUserId) {
-    return startSession();
-  }
-
-  try {
-    const where = encodeURIComponent(
-      JSON.stringify({ userId: currentUserId })
-    );
-
-    const res = await fetch(
-      `${BASE_URL}/studyProgress?where=${where}`,
-      { headers }
-    );
-
-    const data = await res.json();
-
-    if (!data.results?.length) {
-      return startSession();
-    }
-
-    const progress = data.results[0];
-
-    currentIndex = progress.currentIndex || 0;
-    currentMode = progress.currentMode || studyModes.EN_TO_CN;
-    inWrongReview = progress.inWrongReview || false;
-
-    const wordIds = progress.groupWordIds || [];
-    const words = [];
-
-    for (const id of wordIds) {
-      const r = await fetch(
-        `${BASE_URL}/Words/${id}`,
-        { headers }
-      );
-      const w = await r.json();
-      words.push(w);
-    }
-
-    state.groupWords = words;
-    currentWord = words[currentIndex];
-
-    renderWord();
-
-  } catch (err) {
-    console.error("恢复学习进度失败", err);
-    startSession();
-  }
-}
 function flipCard() { 
   const card = document.getElementById("card"); 
   if (!card) return;
@@ -269,19 +219,6 @@ function toggleExpand(event) {
   document.getElementById("card").classList.toggle("expanded", expanded);
 }
 
-async function renderWord() {
-  if (!currentWord) return;
-  const primary = document.getElementById("primary");
-  const meta = document.getElementById("meta");
-  const meaning = document.getElementById("meaning");
-  const example = document.getElementById("example");
-  const root = document.getElementById("root");
-  const memoryMethodInput = document.getElementById("memoryMethodInput");
-  
-  if (!primary || !meta || !meaning || !example || !root || !memoryMethodInput) return;
-  
-  expanded = false;
-  document.getElementById("card").classList.remove("expanded");
   
  // 模式配置映射，把两种模式的渲染规则写死在这里
 // 渲染单词卡片
@@ -903,4 +840,4 @@ async function startSession() {
   renderWord();
 }
 
-startSession();
+loadStudyProgress();
