@@ -77,6 +77,117 @@ async function saveWord(status) {
   }
 }
 
+
+
+//新增“保存进度”函数
+async function saveStudyProgress() {
+  const currentUserId = localStorage.getItem("userId");
+  if (!currentUserId) return;
+
+  const payload = {
+    userId: currentUserId,
+    currentIndex,
+    currentMode,
+    inWrongReview,
+    groupWordIds: state.groupWords.map(w => w.objectId),
+    wrongWordIds: state.wrongWords.map(w => w.objectId)
+  };
+
+  try {
+    const where = encodeURIComponent(
+      JSON.stringify({ userId: currentUserId })
+    );
+
+    // 先查有没有已有记录
+    const res = await fetch(
+      `${BASE_URL}/studyProgress?where=${where}`,
+      { headers }
+    );
+
+    const data = await res.json();
+
+    if (data.results?.length) {
+      // 有记录 → 更新
+      const objectId = data.results[0].objectId;
+
+      await fetch(
+        `${BASE_URL}/studyProgress/${objectId}`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify(payload)
+        }
+      );
+    } else {
+      // 没记录 → 新建
+      await fetch(
+        `${BASE_URL}/studyProgress`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        }
+      );
+    }
+
+  } catch (err) {
+    console.error("保存学习进度失败", err);
+  }
+}
+
+//新增“恢复进度”函数
+async function loadStudyProgress() {
+  const currentUserId = localStorage.getItem("userId");
+
+  if (!currentUserId) {
+    return startSession();
+  }
+
+  try {
+    const where = encodeURIComponent(
+      JSON.stringify({ userId: currentUserId })
+    );
+
+    const res = await fetch(
+      `${BASE_URL}/studyProgress?where=${where}`,
+      { headers }
+    );
+
+    const data = await res.json();
+
+    if (!data.results?.length) {
+      return startSession();
+    }
+
+    const progress = data.results[0];
+
+    currentIndex = progress.currentIndex || 0;
+    currentMode = progress.currentMode || studyModes.EN_TO_CN;
+    inWrongReview = progress.inWrongReview || false;
+
+    const wordIds = progress.groupWordIds || [];
+    const words = [];
+
+    for (const id of wordIds) {
+      const r = await fetch(
+        `${BASE_URL}/Words/${id}`,
+        { headers }
+      );
+      const w = await r.json();
+      words.push(w);
+    }
+
+    state.groupWords = words;
+    currentWord = words[currentIndex];
+
+    renderWord();
+
+  } catch (err) {
+    console.error("恢复学习进度失败", err);
+    startSession();
+  }
+}
+//-----------------------------------
 function switchMode(mode) {
   if (currentMode === mode || inWrongReview) return;
   currentMode = mode;
@@ -85,7 +196,57 @@ function switchMode(mode) {
   flipCard();
   renderWord();
 }
+async function loadStudyProgress() {
+  const currentUserId = localStorage.getItem("userId");
 
+  if (!currentUserId) {
+    return startSession();
+  }
+
+  try {
+    const where = encodeURIComponent(
+      JSON.stringify({ userId: currentUserId })
+    );
+
+    const res = await fetch(
+      `${BASE_URL}/studyProgress?where=${where}`,
+      { headers }
+    );
+
+    const data = await res.json();
+
+    if (!data.results?.length) {
+      return startSession();
+    }
+
+    const progress = data.results[0];
+
+    currentIndex = progress.currentIndex || 0;
+    currentMode = progress.currentMode || studyModes.EN_TO_CN;
+    inWrongReview = progress.inWrongReview || false;
+
+    const wordIds = progress.groupWordIds || [];
+    const words = [];
+
+    for (const id of wordIds) {
+      const r = await fetch(
+        `${BASE_URL}/Words/${id}`,
+        { headers }
+      );
+      const w = await r.json();
+      words.push(w);
+    }
+
+    state.groupWords = words;
+    currentWord = words[currentIndex];
+
+    renderWord();
+
+  } catch (err) {
+    console.error("恢复学习进度失败", err);
+    startSession();
+  }
+}
 function flipCard() { 
   const card = document.getElementById("card"); 
   if (!card) return;
@@ -196,8 +357,9 @@ async function handleKnow(known, event) {
   }
   state.todayDone += 1;
   state.phaseDone += 1;
-  await saveWord(known ? 1 : 0);
-  await nextWord();
+await saveWord(known ? 1 : 0);
+await saveStudyProgress();
+await nextWord();
 }
 
 async function nextWord() {
@@ -359,7 +521,7 @@ function closePassageModal(startNext = false) {
   }
   if (pendingNextSession && startNext) {
     pendingNextSession = false;
-    startSession();
+    loadStudyProgress();
   }
 }
 
