@@ -581,34 +581,79 @@ await saveStudyProgress();
 await nextWord();
 }
 
+
+
 async function nextWord() {
   currentIndex += 1;
-  const queue = inWrongReview ? state.wrongWords : state.groupWords;
+
+  const queue =
+    inWrongReview
+      ? state.wrongWords
+      : state.groupWords;
+
   if (currentIndex >= queue.length) {
-    if (inWrongReview) return openPassageTest(state.groupWords);
-   if (currentMode === studyModes.EN_TO_CN) {
-  currentMode = studyModes.CN_TO_EN;
-  currentIndex = 0;
-  state.phaseDone = 0;
 
-  await saveStudyProgress();   // 加这个
+    // 错词复习结束
+    if (inWrongReview) {
+      return openPassageTest(
+        state.groupWords
+      );
+    }
 
-  switchMode("cn");
-  return;
-}
-if (state.wrongWords.length) {
-  inWrongReview = true;
-  currentIndex = 0;
+    // 第一轮结束：切换到中→英
+    if (
+      currentMode ===
+      studyModes.EN_TO_CN
+    ) {
+      currentMode =
+        studyModes.CN_TO_EN;
 
-  await saveStudyProgress();
+      currentIndex = 0;
+      state.phaseDone = 0;
 
-  showToast(`进入错词复习`);
-  currentWord = state.wrongWords[currentIndex];
+      await saveStudyProgress();
+
+      switchMode("cn");
+      return;
+    }
+
+    // 第二轮结束：进入错词复习
+    if (state.wrongWords.length) {
+      inWrongReview = true;
+      currentIndex = 0;
+
+      await saveStudyProgress();
+
+      showToast(
+        "进入错词复习"
+      );
+
+      currentWord =
+        state.wrongWords[
+          currentIndex
+        ];
+
+      renderWord();
+      return;
+    }
+
+    // 全部完成
+    return openPassageTest(
+      state.groupWords
+    );
+  }
+
+  // 正常进入下一词
+  currentWord =
+    queue[currentIndex];
+
   renderWord();
-  return;
 }
 
-}   // ← 缺的就是这个
+
+
+
+
 // 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
 async function generatePassage(words) {
  const genKey = GEN_API_KEY;
