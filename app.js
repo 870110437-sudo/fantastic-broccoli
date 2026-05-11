@@ -589,11 +589,11 @@ async function nextWord() {
   switchMode("cn");
   return;
 }
-  if (state.wrongWords.length) {
+if (state.wrongWords.length) {
   inWrongReview = true;
   currentIndex = 0;
 
-  await saveStudyProgress();   // 加这个
+  await saveStudyProgress();
 
   showToast(`进入错词复习`);
   currentWord = state.wrongWords[currentIndex];
@@ -601,6 +601,7 @@ async function nextWord() {
   return;
 }
 
+}   // ← 缺的就是这个
 // 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
 async function generatePassage(words) {
  const genKey = GEN_API_KEY;
@@ -836,13 +837,6 @@ async function deleteWord(event) {
   currentWord = queue[currentIndex];
   renderWord();
 }
-
-async function startSession() {
-  state.groupWords = await getWordGroup(GROUP_SIZE);
-  state.wrongWords = [];
-  currentMode = studyModes.EN_TO_CN;
-  inWrongReview = false;
-  currentIndex = 0;
 //添加单词
   function openAddWordModal(event) {
   if (event) event.stopPropagation();
@@ -937,6 +931,13 @@ async function saveNewWord() {
     );
   }
 }
+async function startSession() {
+  state.groupWords = await getWordGroup(GROUP_SIZE);
+  state.wrongWords = [];
+  currentMode = studyModes.EN_TO_CN;
+  inWrongReview = false;
+  currentIndex = 0;
+
   // 修复：不要累计
   state.todayNew = GROUP_SIZE;
 
