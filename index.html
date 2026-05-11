@@ -88,44 +88,21 @@
 
   
 <div id="addWordModal" class="modal hidden">
-  <div class="modal-box">
-    <h3>添加新单词</h3>
-    <input
-      id="newWordInput"
-      placeholder="英文单词"
-    />
+ <div class="modal-box">
+  <h3>新增单词</h3>
 
-    <input
-      id="newMeaningInput"
-      placeholder="中文释义"
-    />
+  <input id="newWord" placeholder="输入英文单词">
+  <input id="newMeaning" placeholder="输入中文释义">
 
-    <div class="modal-actions">
-      <button onclick="saveNewWord()">
-        保存
-      </button>
-
-      <button onclick="closeAddWordModal()">
-        取消
-      </button>
-    </div>
-
+  <div class="modal-actions">
+    <button onclick="closeModal()">取消</button>
+    <button onclick="saveWord()">保存</button>
   </div>
+</div>
 </div>
 
 
-  
-<div class="modal hidden" id="settingsModal">
-  <div class="modal-card">
-    <h3>API 设置</h3>
-    <p class="modal-hint">为安全起见，Key 仅保存在当前浏览器本地。</p>
-    <input id="apiKeyInput" class="api-input" placeholder="输入 shiyunapi key">
-    <div class="modal-actions">
-      <button class="btn ghost" onclick="closeSettingsModal()">取消</button>
-      <button class="btn know" onclick="saveApiKey()">保存</button>
-    </div>
-  </div>
-</div>
+
 
 <div id="toast" class="toast"></div>
 
