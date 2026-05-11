@@ -80,8 +80,15 @@ async function getWordGroup(size = GROUP_SIZE) {
 async function saveWord(status) {
   if (!currentWord) return;
   const where = encodeURIComponent(JSON.stringify({ userId, wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId } }));
-  const findRes = await fetch(`${BASE_URL}/userwords?where=${where}`, { headers });
-  const findData = await findRes.json();
+
+const findRes = await fetch(
+  `${BASE_URL}/userwords?where=${where}`,
+  { headers });
+console.log("userwords status:", findRes.status);
+const findData = await findRes.json();
+console.log("userwords response:", findData);
+
+  
   if (findData.results?.length) {
     const record = findData.results[0];
     await fetch(`${BASE_URL}/userwords/${record.objectId}`, { method: "PUT", headers, body: JSON.stringify({ status, reviewCount: (record.reviewCount || 0) + 1 }) });
