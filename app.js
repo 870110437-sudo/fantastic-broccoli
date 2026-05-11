@@ -204,8 +204,26 @@ state.streak = progress.streak || 1;
       words.push(w);
     }
 
-    state.groupWords = words;
-    currentWord = words[currentIndex];
+  state.groupWords = words;
+
+// 恢复错词
+const wrongIds =
+  progress.wrongWordIds || [];
+
+state.wrongWords =
+  words.filter(w =>
+    wrongIds.includes(
+      w.objectId
+    )
+  );
+
+const queue =
+  inWrongReview
+    ? state.wrongWords
+    : state.groupWords;
+
+currentWord =
+  queue[currentIndex];
 
     renderWord();
 
@@ -710,13 +728,25 @@ async function openPassageTest(words) {
 }
 
 function closePassageModal(startNext = false) {
-  const passageModal = document.getElementById("passageModal");
+  const passageModal =
+    document.getElementById(
+      "passageModal"
+    );
+
   if (passageModal) {
-    passageModal.classList.add("hidden");
+    passageModal.classList.add(
+      "hidden"
+    );
   }
-  if (pendingNextSession && startNext) {
+
+  if (
+    pendingNextSession &&
+    startNext
+  ) {
     pendingNextSession = false;
-    loadStudyProgress();
+
+    // 修复：不要恢复旧记录
+    startSession();
   }
 }
 
@@ -812,26 +842,35 @@ async function startSession() {
   currentMode = studyModes.EN_TO_CN;
   inWrongReview = false;
   currentIndex = 0;
-  state.todayNew += state.groupWords.length;
+
+  // 修复：不要累计
+  state.todayNew = GROUP_SIZE;
+
   state.phaseDone = 0;
-  
+
   const segIndicator = document.getElementById("segIndicator");
   if (segIndicator) {
     segIndicator.style.transform = "translateX(0)";
   }
-  
-  document.querySelectorAll(".seg-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === "en"));
-  
+
+  document.querySelectorAll(".seg-btn")
+    .forEach(btn =>
+      btn.classList.toggle(
+        "active",
+        btn.dataset.mode === "en"
+      )
+    );
+
   currentWord = state.groupWords[0] || null;
-  
-  const progressText = document.getElementById("progressText");
-  if (!currentWord) { 
-    if (progressText) {
-      progressText.textContent = "词库不足，请先补充单词";
-    }
-    return; 
+
+  if (!currentWord) {
+    document.getElementById(
+      "progressText"
+    ).textContent = "词库不足，请先补充单词";
+    return;
   }
-  
+
+  await saveStudyProgress();   // 新增
   renderWord();
 }
 
