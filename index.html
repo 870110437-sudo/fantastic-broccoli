@@ -54,7 +54,9 @@
   </div>
 
   <div class="bottom actions-row">
-        <button class="delete"onclick="openAddWordModal(event) ">➕ 添加单词</button>
+      <button onclick="openAddWordModal()">
+  新增单词
+</button>
     <button class="delete" onclick="deleteWord(event)">删除当前词</button>
     <button class="delete" onclick="openHistoryModal(event)">查看短文</button>
     <button class="delete" onclick="openSettingsModal()">API设置</button>
@@ -95,7 +97,9 @@
   <input id="newMeaning" placeholder="输入中文释义">
 
   <div class="modal-actions">
-    <button onclick="closeModal()">取消</button>
+  <button onclick="closeModal()">
+  取消
+</button>
     <button onclick="saveWord()">保存</button>
   </div>
 </div>
