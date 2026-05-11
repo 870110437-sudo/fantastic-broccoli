@@ -579,25 +579,26 @@ async function nextWord() {
   const queue = inWrongReview ? state.wrongWords : state.groupWords;
   if (currentIndex >= queue.length) {
     if (inWrongReview) return openPassageTest(state.groupWords);
-    if (currentMode === studyModes.EN_TO_CN) { 
-      currentMode = studyModes.CN_TO_EN; 
-      currentIndex = 0; 
-      state.phaseDone = 0; 
-      switchMode("cn"); 
-      return; 
-    }
-    if (state.wrongWords.length) { 
-      inWrongReview = true; 
-      currentIndex = 0; 
-      showToast(`进入错词复习：${state.wrongWords.length} 个`); 
-      currentWord = state.wrongWords[currentIndex]; 
-      renderWord();
-      return;
-    }
-    return openPassageTest(state.groupWords);
-  }
-  currentWord = queue[currentIndex];
+   if (currentMode === studyModes.EN_TO_CN) {
+  currentMode = studyModes.CN_TO_EN;
+  currentIndex = 0;
+  state.phaseDone = 0;
+
+  await saveStudyProgress();   // 加这个
+
+  switchMode("cn");
+  return;
+}
+  if (state.wrongWords.length) {
+  inWrongReview = true;
+  currentIndex = 0;
+
+  await saveStudyProgress();   // 加这个
+
+  showToast(`进入错词复习`);
+  currentWord = state.wrongWords[currentIndex];
   renderWord();
+  return;
 }
 
 // 修复：仅保留一个generatePassage函数，使用localStorage中的API Key
@@ -842,7 +843,100 @@ async function startSession() {
   currentMode = studyModes.EN_TO_CN;
   inWrongReview = false;
   currentIndex = 0;
+//添加单词
+  function openAddWordModal(event) {
+  if (event) event.stopPropagation();
 
+  document
+    .getElementById("addWordModal")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("newWordInput")
+    .value = "";
+
+  document
+    .getElementById("newMeaningInput")
+    .value = "";
+}
+
+function closeAddWordModal() {
+  document
+    .getElementById("addWordModal")
+    .classList.add("hidden");
+}
+
+
+async function saveNewWord() {
+  const word = document
+    .getElementById("newWordInput")
+    .value
+    .trim()
+    .toLowerCase();
+
+  const meaning = document
+    .getElementById("newMeaningInput")
+    .value
+    .trim();
+
+  if (!word || !meaning) {
+    showToast("请填写完整");
+    return;
+  }
+
+  try {
+    // 先查重
+    const where =
+      encodeURIComponent(
+        JSON.stringify({
+          word
+        })
+      );
+
+    const checkRes =
+      await fetch(
+        `${BASE_URL}/Words?where=${where}`,
+        { headers }
+      );
+
+    const checkData =
+      await checkRes.json();
+
+    if (
+      checkData.results?.length
+    ) {
+      showToast(
+        "单词已存在"
+      );
+      return;
+    }
+
+    // 保存
+    await fetch(
+      `${BASE_URL}/Words`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          word,
+          meaning
+        })
+      }
+    );
+
+    showToast(
+      "已加入单词库"
+    );
+
+    closeAddWordModal();
+
+  } catch (err) {
+    console.error(err);
+    showToast(
+      "添加失败"
+    );
+  }
+}
   // 修复：不要累计
   state.todayNew = GROUP_SIZE;
 
