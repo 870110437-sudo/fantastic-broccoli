@@ -97,14 +97,24 @@ async function saveStudyProgress() {
   const currentUserId = localStorage.getItem("userId");
   if (!currentUserId) return;
 
-  const payload = {
-    userId: currentUserId,
-    currentIndex,
-    currentMode,
-    inWrongReview,
-    groupWordIds: state.groupWords.map(w => w.objectId),
-    wrongWordIds: state.wrongWords.map(w => w.objectId)
-  };
+ const payload = {
+  userId: currentUserId,
+  currentIndex,
+  currentMode,
+  inWrongReview,
+
+  todayDone: state.todayDone,
+  todayNew: state.todayNew,
+  streak: state.streak,
+
+  groupWordIds: state.groupWords.map(
+    w => w.objectId
+  ),
+
+  wrongWordIds: state.wrongWords.map(
+    w => w.objectId
+  )
+};
 
   try {
     const where = encodeURIComponent(
@@ -177,6 +187,10 @@ async function loadStudyProgress() {
     currentIndex = progress.currentIndex || 0;
     currentMode = progress.currentMode || studyModes.EN_TO_CN;
     inWrongReview = progress.inWrongReview || false;
+
+    state.todayDone = progress.todayDone || 0;
+state.todayNew = progress.todayNew || 0;
+state.streak = progress.streak || 1;
 
     const wordIds = progress.groupWordIds || [];
     const words = [];
