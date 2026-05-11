@@ -76,7 +76,14 @@ async function getWordGroup(size = GROUP_SIZE) {
   }
   return Array.from(map.values());
 }
-
+// 关闭新增单词弹窗
+function closeModal() {
+  const modal = document.getElementById("addWordModal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+//保存单词
 async function saveWord(status) {
   if (!currentWord) return;
   const where = encodeURIComponent(JSON.stringify({ userId, wordId: { "__type": "Pointer", className: "Words", objectId: currentWord.objectId } }));
