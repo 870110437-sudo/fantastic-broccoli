@@ -897,28 +897,30 @@ async function deleteWord(event) {
   renderWord();
 }
 //添加单词
-  function openAddWordModal(event) {
-  if (event) event.stopPropagation();
+// 打开新增单词弹窗
+function openAddWordModal() {
+  const modal = document.getElementById("addWordModal");
+  const wordInput = document.getElementById("newWord");
+  const meaningInput = document.getElementById("newMeaning");
 
-  document
-    .getElementById("addWordModal")
-    .classList.remove("hidden");
+  if (!modal) {
+    console.error("没找到 addWordModal");
+    return;
+  }
 
-  document
-    .getElementById("newWordInput")
-    .value = "";
+  if (wordInput) wordInput.value = "";
+  if (meaningInput) meaningInput.value = "";
 
-  document
-    .getElementById("newMeaningInput")
-    .value = "";
+  modal.classList.remove("hidden");
 }
 
-function closeAddWordModal() {
-  document
-    .getElementById("addWordModal")
-    .classList.add("hidden");
+// 关闭新增单词弹窗
+function closeModal() {
+  const modal = document.getElementById("addWordModal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
 }
-
 
 async function saveNewWord() {
   const word = document
