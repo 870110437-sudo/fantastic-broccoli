@@ -24,7 +24,7 @@
   </div>
 
   <div class="card" id="card" onclick="toggleExpand(event)">
-    <div class="primary" id="primary" onclick="playAudio(event)">Loading...</div>
+    <div class="primary" id="primary" onclick="playPronunciation(event)">Loading...</div>
     <div class="meta" id="meta"></div>
 
 
@@ -41,7 +41,7 @@
 
   <div class="controls controls-4">
     <button class="btn ghost"  onclick="playPronunciation()">🔊 发音</button>
-    <button class="btn ghost slow" onclick="playAudio(event, true)">慢速</button>
+    <button class="btn ghost slow" onclick="playPronunciation(event, true)">慢速</button>
     <button class="btn know" onclick="handleKnow(true, event)">认识</button>
     <button class="btn dont" onclick="handleKnow(false, event)">不认识</button>
   </div>
