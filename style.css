@@ -117,18 +117,146 @@ body {
   font-size: 14px;
   color: #666;
 }
-.modal-box input {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+/* ===== 新增单词弹窗高级版 ===== */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999;
 }
 
+.modal.hidden {
+  display: none;
+}
+
+.modal-box {
+  width: min(460px, 92%);
+  padding: 28px;
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px);
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+
+  animation: modalPop .28s ease;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 标题 */
+.modal-box h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #0f172a;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* 输入框 */
+.modal-box input {
+  width: 100%;
+  padding: 14px 16px;
+  margin: 10px 0;
+
+  border-radius: 14px;
+  border: 1px solid rgba(203,213,225,.8);
+
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+
+  font-size: 15px;
+  color: #1e293b;
+
+  transition: all .25s ease;
+  outline: none;
+}
+
+.modal-box input::placeholder {
+  color: #94a3b8;
+}
+/* 添加单词 */
+.modal-box input:focus {
+  border-color: #7c9bff;
+  box-shadow:
+    0 0 0 4px rgba(124,155,255,.15),
+    0 8px 20px rgba(124,155,255,.08);
+  background: rgba(255,255,255,.92);
+}
+
+/* 按钮区域 */
 .modal-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+/* 通用按钮 */
+.modal-actions button {
+  flex: 1;
+  padding: 13px;
+
+  border: none;
+  border-radius: 14px;
+
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: all .25s ease;
+}
+
+/* 取消按钮 */
+.modal-actions button:first-child {
+  background: rgba(241,245,249,.9);
+  color: #475569;
+}
+
+.modal-actions button:first-child:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+/* 保存按钮 */
+.modal-actions button:last-child {
+  background: linear-gradient(
+    135deg,
+    #7c9bff,
+    #5f7dff
+  );
+  color: white;
+
+  box-shadow:
+    0 10px 24px rgba(95,125,255,.25);
+}
+
+.modal-actions button:last-child:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 30px rgba(95,125,255,.35);
+}
+
+.modal-actions button:active {
+  transform: scale(.98);
 }
 @keyframes spin {
   to {
