@@ -4,10 +4,15 @@ const BASE_URL = "https://api.codenow.cn/1/classes";
 const GEN_BASE_URL = "https://shiyunapi.com/v1";
 const CHEAP_MODEL = "deepseek-chat";
 const GEN_API_KEY = "sk-Cc6RjpYaHQmyJctCxaJEVjOcroZCvQZTwe7PQRiXDBpGZcsd";
-const headers = {
+const GET_HEADERS = {
+  "X-Bmob-Application-Id": APP_ID,
+  "X-Bmob-REST-API-Key": APP_KEY
+};
+
+const POST_HEADERS = {
   "X-Bmob-Application-Id": APP_ID,
   "X-Bmob-REST-API-Key": APP_KEY,
- // "Content-Type": "application/json"
+  "Content-Type": "application/json"
 };
 
 const studyModes = { EN_TO_CN: "en", CN_TO_EN: "cn" };
@@ -61,7 +66,10 @@ function escapeHtml(text = "") {
 
 async function getRandomWord() {
   const skip = Math.floor(Math.random() * 120);
-  const res = await fetch(`${BASE_URL}/Words?limit=1&skip=${skip}`, { headers });
+const res = await fetch(
+  `${BASE_URL}/Words?limit=1&skip=${skip}`,
+  { headers: GET_HEADERS }
+);
   const data = await res.json();
   return data.results?.[0] || null;
 }
@@ -90,7 +98,8 @@ async function saveWord(status) {
 
 const findRes = await fetch(
   `${BASE_URL}/userwords?where=${where}`,
-  { headers });
+  { headers: GET_HEADERS }
+);
 console.log("userwords status:", findRes.status);
 const findData = await findRes.json();
 console.log("userwords response:", findData);
@@ -138,7 +147,7 @@ async function saveStudyProgress() {
     // 先查有没有已有记录
     const res = await fetch(
       `${BASE_URL}/studyProgress?where=${where}`,
-      { headers }
+      {headers: POST_HEADERS}
     );
 
     const data = await res.json();
@@ -151,7 +160,7 @@ async function saveStudyProgress() {
         `${BASE_URL}/studyProgress/${objectId}`,
         {
           method: "PUT",
-          headers,
+          headers: POST_HEADERS,
           body: JSON.stringify(payload)
         }
       );
@@ -161,7 +170,7 @@ async function saveStudyProgress() {
         `${BASE_URL}/studyProgress`,
         {
           method: "POST",
-          headers,
+        headers: POST_HEADERS,
           body: JSON.stringify(payload)
         }
       );
@@ -185,10 +194,10 @@ async function loadStudyProgress() {
       JSON.stringify({ userId: currentUserId })
     );
 
-    const res = await fetch(
-      `${BASE_URL}/studyProgress?where=${where}`,
-      { headers }
-    );
+   const res = await fetch(
+  `${BASE_URL}/studyProgress?where=${where}`,
+  { headers: GET_HEADERS }
+);
 
     const data = await res.json();
 
@@ -212,7 +221,7 @@ state.streak = progress.streak || 1;
     for (const id of wordIds) {
       const r = await fetch(
         `${BASE_URL}/Words/${id}`,
-        { headers }
+        { headers: POST_HEADERS }
       );
       const w = await r.json();
       words.push(w);
@@ -561,7 +570,7 @@ async function saveMemoryMethod(event) {
   try {
     await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, {
       method: "PUT",
-      headers,
+     headers: POST_HEADERS,
       body: JSON.stringify({ memorymethod })
     });
     currentWord.memorymethod = memorymethod;
@@ -824,7 +833,10 @@ async function openHistoryModal(event) {
   
   try {
     const where = encodeURIComponent(JSON.stringify({ userId }));
-    const res = await fetch(`${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`, { headers });
+ const res = await fetch(
+  `${BASE_URL}/shortpassage?where=${where}&order=-createdAt&limit=30`,
+  { headers: GET_HEADERS }
+);
     const data = await res.json();
     const rows = data.results || [];
     
@@ -885,7 +897,7 @@ async function deleteWord(event) {
   if (!currentWord) return;
   if (!confirm(`确定删除单词：${currentWord.word} 吗？`)) return;
   
-  await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, { method: "DELETE", headers });
+  await fetch(`${BASE_URL}/Words/${currentWord.objectId}`, { method: "DELETE", headers: POST_HEADERS});
   state.groupWords = state.groupWords.filter(w => w.objectId !== currentWord.objectId);
   state.wrongWords = state.wrongWords.filter(w => w.objectId !== currentWord.objectId);
   
@@ -951,7 +963,7 @@ async function saveNewWord() {
     const checkRes =
       await fetch(
         `${BASE_URL}/Words?where=${where}`,
-        { headers }
+        {headers: POST_HEADERS }
       );
 
     const checkData =
