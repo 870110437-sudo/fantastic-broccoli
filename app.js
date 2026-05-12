@@ -296,11 +296,6 @@ if (!currentWord) {
 renderWord();
 
 
-// 选择当前学习队列
-const queue = inWrongReview
-  ? state.wrongWords
-  : state.groupWords;
-
 // 队列为空，重新开始
 if (!queue.length) {
   console.warn("恢复队列为空，重新开始");
