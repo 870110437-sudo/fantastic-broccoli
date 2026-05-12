@@ -5,9 +5,9 @@ const GEN_BASE_URL = "https://shiyunapi.com/v1";
 const CHEAP_MODEL = "deepseek-chat";
 const GEN_API_KEY = "sk-Cc6RjpYaHQmyJctCxaJEVjOcroZCvQZTwe7PQRiXDBpGZcsd";
 const headers = {
-  "X-LC-Id": APP_ID,
-   "X-LC-Key": APP_KEY,
-  "Content-Type": "application/json"
+  "X-Bmob-Application-Id": APP_ID,
+  "X-Bmob-REST-API-Key": APP_KEY,
+ // "Content-Type": "application/json"
 };
 
 const studyModes = { EN_TO_CN: "en", CN_TO_EN: "cn" };
