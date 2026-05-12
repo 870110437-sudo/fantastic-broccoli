@@ -295,14 +295,6 @@ if (!currentWord) {
 
 renderWord();
 
-// 恢复错词
-const wrongIds = Array.isArray(progress.wrongWordIds)
-  ? progress.wrongWordIds
-  : [];
-
-state.wrongWords = words.filter(w =>
-  wrongIds.includes(w.objectId)
-);
 
 // 选择当前学习队列
 const queue = inWrongReview
