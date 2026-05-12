@@ -243,7 +243,7 @@ if (!wordIds.length) {
 for (const id of wordIds) {
   try {
     const r = await fetch(
-      `${BASE_URL}/Words/${id}`,
+      `${BASE_URL}/Words/${c42d7cb0f2}`,
       { headers: GET_HEADERS }
     );
 
