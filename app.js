@@ -267,7 +267,9 @@ state.groupWords = words;
 
 // 恢复错词
 const wrongIds = Array.isArray(progress.wrongWordIds)
-  ? progress.wrongWordIds
+  ? progress.wrongWordIds.filter(id =>
+      words.some(w => w.objectId === id)
+    )
   : [];
 
 state.wrongWords = words.filter(w =>
