@@ -228,7 +228,35 @@ for (const id of wordIds) {
     const w = await r.json();
 
     // 跳过已删除的单词
-    if (w.error || !w.objectId) {
+ const wordIds = Array.isArray(progress.groupWordIds)
+  ? progress.groupWordIds
+  : [];
+
+const words = [];
+
+// 没有单词，直接重新开始
+if (!wordIds.length) {
+  console.warn("没有可恢复的单词，重新开始");
+  return startSession();
+}
+
+for (const id of wordIds) {
+  try {
+    const r = await fetch(
+      `${BASE_URL}/Words/${id}`,
+      { headers: GET_HEADERS }
+    );
+
+    // 请求失败（比如404）
+    if (!r.ok) {
+      console.warn("请求失败，跳过：", id, r.status);
+      continue;
+    }
+
+    const w = await r.json();
+
+    // 数据异常
+    if (!w || !w.objectId) {
       console.warn("单词不存在，跳过：", id);
       continue;
     }
@@ -237,36 +265,83 @@ for (const id of wordIds) {
 
   } catch (err) {
     console.warn("读取单词失败：", id, err);
+    continue;
   }
 }
-  state.groupWords = words;
+
+// 全部失效了
+if (!words.length) {
+  console.warn("恢复的单词全部失效，重新开始");
+  return startSession();
+}
+
+state.groupWords = words;
 
 // 恢复错词
-const wrongIds =
-  progress.wrongWordIds || [];
+const wrongIds = Array.isArray(progress.wrongWordIds)
+  ? progress.wrongWordIds
+  : [];
 
-state.wrongWords =
-  words.filter(w =>
-    wrongIds.includes(
-      w.objectId
-    )
-  );
+state.wrongWords = words.filter(w =>
+  wrongIds.includes(w.objectId)
+);
 
-const queue =
-  inWrongReview
-    ? state.wrongWords
-    : state.groupWords;
+const queue = inWrongReview
+  ? state.wrongWords
+  : state.groupWords;
 
-currentWord =
-  queue[currentIndex];
-
-    renderWord();
-
-  } catch (err) {
-    console.error("恢复学习进度失败", err);
-    startSession();
-  }
+// currentIndex 越界保护
+if (currentIndex >= queue.length) {
+  currentIndex = 0;
 }
+
+currentWord = queue[currentIndex];
+
+// currentWord 为空保护
+if (!currentWord) {
+  console.warn("currentWord 为空，重新开始");
+  return startSession();
+}
+
+renderWord();
+
+// 恢复错词
+const wrongIds = Array.isArray(progress.wrongWordIds)
+  ? progress.wrongWordIds
+  : [];
+
+state.wrongWords = words.filter(w =>
+  wrongIds.includes(w.objectId)
+);
+
+// 选择当前学习队列
+const queue = inWrongReview
+  ? state.wrongWords
+  : state.groupWords;
+
+// 队列为空，重新开始
+if (!queue.length) {
+  console.warn("恢复队列为空，重新开始");
+  return startSession();
+}
+
+// currentIndex 越界修正
+if (currentIndex >= queue.length) {
+  currentIndex = 0;
+}
+
+// 设置当前单词
+currentWord = queue[currentIndex];
+
+// 再保险
+if (!currentWord) {
+  console.warn("当前单词为空，重新开始");
+  return startSession();
+}
+renderWord();
+
+
+  
 //-----------------------------------
 function switchMode(mode) {
   if (currentMode === mode || inWrongReview) return;
