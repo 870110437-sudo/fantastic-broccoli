@@ -228,45 +228,33 @@ for (const id of wordIds) {
     const w = await r.json();
 
     // 跳过已删除的单词
- const wordIds = Array.isArray(progress.groupWordIds)
-  ? progress.groupWordIds
-  : [];
+if (w.error || !w.objectId) {
+  console.warn("单词不存在，用固定单词替代：", id);
 
-const words = [];
-
-// 没有单词，直接重新开始
-if (!wordIds.length) {
-  console.warn("没有可恢复的单词，重新开始");
-  return startSession();
-}
-
-for (const id of wordIds) {
   try {
-    const r = await fetch(
-      `${BASE_URL}/Words/${c42d7cb0f2}`,
+    const fallbackRes = await fetch(
+      `${BASE_URL}/Words/c42d7cb0f2`,
       { headers: GET_HEADERS }
     );
 
-    // 请求失败（比如404）
-    if (!r.ok) {
-      console.warn("请求失败，跳过：", id, r.status);
-      continue;
+    const fallbackWord =
+      await fallbackRes.json();
+
+    if (
+      fallbackWord &&
+      fallbackWord.objectId
+    ) {
+      words.push(fallbackWord);
     }
-
-    const w = await r.json();
-
-    // 数据异常
-    if (!w || !w.objectId) {
-      console.warn("单词不存在，跳过：", id);
-      continue;
-    }
-
-    words.push(w);
 
   } catch (err) {
-    console.warn("读取单词失败：", id, err);
-    continue;
+    console.error(
+      "固定替代单词加载失败",
+      err
+    );
   }
+
+  continue;
 }
 
 // 全部失效了
