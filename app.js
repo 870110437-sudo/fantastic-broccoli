@@ -215,18 +215,30 @@ async function loadStudyProgress() {
 state.todayNew = progress.todayNew || 0;
 state.streak = progress.streak || 1;
 
-    const wordIds = progress.groupWordIds || [];
-    const words = [];
+ const wordIds = progress.groupWordIds || [];
+const words = [];
 
-    for (const id of wordIds) {
-      const r = await fetch(
-        `${BASE_URL}/Words/${id}`,
-        { headers: POST_HEADERS }
-      );
-      const w = await r.json();
-      words.push(w);
+for (const id of wordIds) {
+  try {
+    const r = await fetch(
+      `${BASE_URL}/Words/${id}`,
+      { headers: GET_HEADERS }
+    );
+
+    const w = await r.json();
+
+    // 跳过已删除的单词
+    if (w.error || !w.objectId) {
+      console.warn("单词不存在，跳过：", id);
+      continue;
     }
 
+    words.push(w);
+
+  } catch (err) {
+    console.warn("读取单词失败：", id, err);
+  }
+}
   state.groupWords = words;
 
 // 恢复错词
