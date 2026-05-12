@@ -983,7 +983,7 @@ async function saveNewWord() {
       "已加入单词库"
     );
 
-    closeAddWordModal();
+   closeModal();
 
   } catch (err) {
     console.error(err);
